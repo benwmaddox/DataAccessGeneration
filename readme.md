@@ -65,6 +65,11 @@ This will generate a series of files to call stored procedures in a SQL Server d
 * IncludesFakes: Bool. Include classes for testing and have the Fake prefix. They are placed in the Fake sub namespace.
 * RepositoryName: String, Optional. If not defined, the Repository name will be {schema}Repository. Otherwise it will be as defined in this property.
 
+## Project History
+* Originally designed for OneSky Flight LLC as an internal project. 
+* Used in production in a limited fashion in 2021 and more widely used in many internal projects in 2022.
+* Transitioned to an open source project with permission in 2022.
+
 ## Project decisions and reasoning
 * An executable instead of nuget package. Maintainable and easy to get running for most developers.
 * Run manually instead of on build. Better control and didn't want to need CI systems to access the database.
