@@ -35,7 +35,7 @@ public class CompileTests
         {
             var generator = new Generator(fileManager);
             var dataLookup = new DataLookup(settings.ConnectionString);
-            generator.Generate(settings, dataLookup, "C:/Test/DB");
+            generator.Generate(settings, dataLookup,  Path.GetTempPath());
             Assert.Empty(generator.Errors);
         });
 
@@ -64,7 +64,7 @@ public class CompileTests
             procedureSetting.Return = ReturnType.Single;
         }
         var dataLookup = new DataLookup(settings.ConnectionString);
-        generator.Generate(settings, dataLookup, "C:/Test/");
+        generator.Generate(settings, dataLookup,  Path.GetTempPath());
 
         AssertCompilesWithoutError(fileManager);
     }

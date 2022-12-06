@@ -83,7 +83,7 @@ public class CompileTests
                 
             }
         };
-        generator.Generate(settings, dataLookup, "C:/Test/");
+        generator.Generate(settings, dataLookup,  Path.GetTempPath());
 
         AssertCompilesWithoutError(fileManager);
     }

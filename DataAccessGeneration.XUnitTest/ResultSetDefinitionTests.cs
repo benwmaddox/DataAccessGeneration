@@ -74,13 +74,14 @@ public class ResultSetDefinitionTests
                 
             }
         };
-        generator.Generate(settings, dataLookup, "C:/Test/");
+        generator.Generate(settings, dataLookup,  Path.GetTempPath());
 
         Assert.NotEmpty(fileManager.SavedFiles);
-        Assert.Contains("C:/Test/CustOrderHist.generated.cs", fileManager.SavedFiles.Keys);
+        var filePath = Path.Join(Path.GetTempPath(), "CustOrderHist.generated.cs");
+        Assert.Contains( filePath, fileManager.SavedFiles.Keys);
         Assert.Contains(@"public partial class CustOrderHist_ResultSet
                                    {
                                        public int? ID { get; set; }
-                                   }".TrimAllLines(), fileManager.SavedFiles["C:/Test/CustOrderHist.generated.cs"].TrimAllLines());
+                                   }".TrimAllLines(), fileManager.SavedFiles[filePath].TrimAllLines());
     }
 }

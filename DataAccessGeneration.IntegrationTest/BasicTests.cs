@@ -30,7 +30,7 @@ public class BasicTests
         var settings = settingsList.First();
         
         var dataLookup = new DataLookup(settings.ConnectionString);
-        generator.Generate(settings, dataLookup, "C:/Test/");
+        generator.Generate(settings, dataLookup,  Path.GetTempPath());
         
         Assert.NotEmpty(fileManager.SavedFiles);
     }
