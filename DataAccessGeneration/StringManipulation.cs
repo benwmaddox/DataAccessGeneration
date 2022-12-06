@@ -66,8 +66,8 @@ public static class StringManipulation
 
         if (result.Length > 2)
         {
-            //Removing trailing \r\n
-            result.Remove(result.Length - 2, 2);
+            //Removing trailing \r\n, \r, or \n
+            result.Remove(result.Length - (Environment.NewLine.Length), Environment.NewLine.Length);
         }
         return result.ToString();
     }
