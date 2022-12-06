@@ -1,0 +1,1 @@
+dotnet publish DataAccessGeneration -p:PublishSingleFile=true -c Release --self-contained false

@@ -1,0 +1,1 @@
+[Shared or local path]\DataAccessGeneration.exe -p $PSScriptRoot\DataAccessGenerationSettings.json 
