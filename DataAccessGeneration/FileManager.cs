@@ -24,4 +24,28 @@ public class FileManager : IFileManager
         }
     }
 
+    public List<string> DeleteFiles(string outputDirectory, HashSet<string>? except = null)
+    {
+        List<string> filesToDelete = new List<string>();
+        except ??= new HashSet<string>();
+        except = except.Select(x => Path.GetFullPath(x, outputDirectory)).ToHashSet();
+        outputDirectory = Path.GetFullPath(outputDirectory);
+        if (!string.IsNullOrEmpty(outputDirectory))
+        {
+            if (!Directory.Exists(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
+    
+            filesToDelete = Directory.GetFiles( outputDirectory, "*", SearchOption.AllDirectories)
+                .Select(Path.GetFullPath)
+                .Where(d => d.Contains("generated.cs") && !except.Contains(d)).ToList();
+            foreach (var filePath in filesToDelete)
+            {
+                File.Delete(filePath);
+            }
+        }
+    
+        return filesToDelete;
+    }
 }

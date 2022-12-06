@@ -86,7 +86,7 @@ public class Generator
             .Concat(fakeRepoClasses.Select(x => x.RelativeFilePath))
             .ToHashSet();
         
-        var deletedFiles = DeleteFiles(outputDirectory, filesToKeep);
+        var deletedFiles = _fileManager.DeleteFiles(outputDirectory, filesToKeep);
         CurrentActivity = settings.RepositoryName + $" finished. {filesToKeep.Count} files generated." 
                                                   + (deletedFiles.Any() ? Environment.NewLine +  $"  {deletedFiles.Count} files deleted: " +  string.Join("", deletedFiles.Select(file => Environment.NewLine + "    " + file)) : "");
     }
@@ -1011,29 +1011,5 @@ public class Generator
         }
     }
     
-    private static List<string> DeleteFiles(string outputDirectory, HashSet<string>? except = null)
-        {
-            List<string> filesToDelete = new List<string>();
-            except ??= new HashSet<string>();
-            except = except.Select(x => Path.GetFullPath(x, outputDirectory)).ToHashSet();
-            outputDirectory = Path.GetFullPath(outputDirectory);
-            if (!string.IsNullOrEmpty(outputDirectory))
-            {
-                if (!Directory.Exists(outputDirectory))
-                {
-                    Directory.CreateDirectory(outputDirectory);
-                }
-    
-                filesToDelete = Directory.GetFiles( outputDirectory, "*", SearchOption.AllDirectories)
-                    .Select(Path.GetFullPath)
-                    .Where(d => d.Contains("generated.cs") && !except.Contains(d)).ToList();
-                foreach (var filePath in filesToDelete)
-                {
-                    File.Delete(filePath);
-                }
-            }
-    
-            return filesToDelete;
-        }
         
 }
