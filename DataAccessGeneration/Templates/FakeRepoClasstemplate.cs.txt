@@ -1,0 +1,21 @@
+﻿public partial class Fake{0} : I{0} 
+{{
+		            
+	public Fake{0}() 
+	{{
+	}}
+
+    public async Task RunTransaction(Func<TransactionManagedContext, Task<TransactionResult>> action)
+    {{
+        // Can't easily make a transaction for fakes. So just running from this class
+        using (var connection = new SqlConnection())
+        {{
+            using (var transaction = connection.BeginTransaction())
+            {{
+                var context = new TransactionManagedContext(this, connection, transaction); 
+                await action.Invoke(context);
+            }}
+        }}
+    }}
+
+}}

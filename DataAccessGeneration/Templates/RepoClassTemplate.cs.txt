@@ -1,0 +1,92 @@
+﻿public enum TransactionResult
+{{
+    Rollback,
+    Commit
+}}
+
+public partial interface I{0}
+{{
+    Task RunTransaction(Func<TransactionManagedContext, Task<TransactionResult>> action);
+}}
+
+public class TransactionManagedContext
+{{                        
+    public TransactionManagedContext(I{0} repository, SqlConnection connection, SqlTransaction transaction)
+    {{
+        Repository = repository;
+        Connection = connection;
+        Transaction = transaction;
+    }}
+    public I{0} Repository {{ get; set; }}
+    public SqlConnection Connection {{ get; set; }}
+    public SqlTransaction Transaction {{ get; set; }}
+}}
+
+public partial class {0} : I{0}
+{{
+    private string _connectionString;
+    public {0}(string connectionString) 
+    {{
+        _connectionString = connectionString;
+    }}
+
+    private object? ConvertDBNullToNull(object item)
+    {{
+        return item == DBNull.Value ? null : item;
+    }}
+
+    public async Task RunTransaction(Func<TransactionManagedContext, Task<TransactionResult>> action)
+    {{
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {{
+            await connection.OpenAsync();
+                
+            using (var transaction = connection.BeginTransaction())
+            {{
+                try
+                {{
+                    var transactionManaged = new {0}.TransactionManaged(connection, transaction);
+                    var transactionContext = new TransactionManagedContext(transactionManaged, connection, transaction);
+                    var result = await action.Invoke(transactionContext);
+                        
+                    if (result == TransactionResult.Rollback) 
+                    {{
+                        transaction.Rollback();
+                    }}
+                    else 
+                    {{
+                        transaction.Commit();
+                    }}
+                }}
+                catch
+                {{
+                    transaction.Rollback();
+                    throw;
+                }}
+            }}
+        }}
+    }}
+    public partial class TransactionManaged : I{0}
+    {{
+        // Didn't use underscores to make it easier to reuse code referencing connection
+        private SqlConnection connection;
+        private SqlTransaction transaction;
+            
+        public TransactionManaged(SqlConnection connectionParameter, SqlTransaction transactionParameter)
+        {{                            
+            connection = connectionParameter;
+            transaction = transactionParameter;                
+        }}
+
+        private object? ConvertDBNullToNull(object item)
+        {{
+            return item == DBNull.Value ? null : item;
+        }}
+        
+        public async Task RunTransaction(Func<TransactionManagedContext, Task<TransactionResult>> action)
+        {{
+            // I hate to do this, but don't see a great alternative
+            await Task.Run(() => throw new NotImplementedException());
+        }}
+    }}
+}}

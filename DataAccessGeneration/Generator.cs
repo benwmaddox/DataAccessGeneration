@@ -8,12 +8,16 @@ public class Generator
     private readonly ParallelOptions _parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 2 };
     public string CurrentActivity { get; set; } = "Initialized";
     public List<string> Errors = new List<string>();
+    private static string repoClassTemplate = string.Empty;
+    private static string fakeRepoClassTemplate = string.Empty;
 
     public Generator(IFileManager fileManager)
     {
         _fileManager = fileManager;
+        repoClassTemplate = File.ReadAllText(@"Templates/RepoClassTemplate.cs.txt");
+        fakeRepoClassTemplate = File.ReadAllText(@"Templates/FakeRepoClassTemplate.cs.txt");
     }
-    
+
     public void Generate(Settings settings, IDataLookup dataLookup, string outputDirectory)
     {
         var procedures = dataLookup.GetProceduresForSchema(settings.SchemaName).Select(x => new ProcedureSetting()
@@ -87,8 +91,7 @@ public class Generator
             .ToHashSet();
         
         var deletedFiles = _fileManager.DeleteFiles(outputDirectory, filesToKeep);
-        CurrentActivity = settings.RepositoryName + $" finished. {filesToKeep.Count} files generated." 
-                                                  + (deletedFiles.Any() ? Environment.NewLine +  $"  {deletedFiles.Count} files deleted: " +  string.Join("", deletedFiles.Select(file => Environment.NewLine + "    " + file)) : "");
+        CurrentActivity = settings.RepositoryName + $" finished. {filesToKeep.Count} files generated." + (deletedFiles.Any() ? Environment.NewLine +  $"  {deletedFiles.Count} files deleted: " +  string.Join("", deletedFiles.Select(file => Environment.NewLine + "    " + file)) : "");
     }
 
     private void VerifyNoDuplicateProcedures(List<ProcedureSetting> settingsProcedureList)
@@ -113,103 +116,12 @@ public class Generator
 
     private static List<(string RelativeFilePath, string FileContent)> GenerateRepoClassWithConstructor(Settings settings)
     {
+        var content = string.Format(fakeRepoClassTemplate, settings.RepositoryName);
         return new List<(string RelativeFilePath, string FileContent)>()
         {
             (
-                $"{settings.RepositoryName}.generated.cs",
-                WrapInNamespace(
-	            $@"public enum TransactionResult
-                {{
-                    Rollback,
-                    Commit
-                }}
-
-                public partial interface I{settings.RepositoryName}
-                {{
-                    Task RunTransaction(Func<TransactionManagedContext, Task<TransactionResult>> action);
-                }}
-
-                public class TransactionManagedContext
-                {{                        
-                    public TransactionManagedContext(I{settings.RepositoryName} repository, SqlConnection connection, SqlTransaction transaction)
-                    {{
-                        Repository = repository;
-                        Connection = connection;
-                        Transaction = transaction;
-                    }}
-
-                    public I{settings.RepositoryName} Repository {{ get; set; }}
-                    public SqlConnection Connection {{ get; set; }}
-                    public SqlTransaction Transaction {{ get; set; }}
-                }}
-
-                public partial class {settings.RepositoryName} : I{settings.RepositoryName}
-	            {{
-		            private string _connectionString;
-		            public {settings.RepositoryName}(string connectionString) 
-		            {{
-			            _connectionString = connectionString;
-		            }}
-		            
-		            private object? ConvertDBNullToNull(object item)
-		            {{
-			            return item == DBNull.Value ? null : item;
-		            }}
-                
-                    public async Task RunTransaction(Func<TransactionManagedContext, Task<TransactionResult>> action)
-                    {{
-                        using (SqlConnection connection = new SqlConnection(_connectionString))
-                        {{
-                            await connection.OpenAsync();
-                            using (var transaction = connection.BeginTransaction())
-                            {{
-                                try
-                                {{
-                                    var transactionManaged = new {settings.RepositoryName}.TransactionManaged(connection, transaction);
-                                    var transactionContext = new TransactionManagedContext(transactionManaged, connection, transaction);
-                                    var result = await action.Invoke(transactionContext);
-                                    if (result == TransactionResult.Rollback) 
-                                    {{
-                                        transaction.Rollback();
-                                    }}
-                                    else 
-                                    {{
-                                         transaction.Commit();
-                                    }}
-                                }}
-                                catch
-                                {{
-                                    transaction.Rollback();
-                                    throw;
-                                }}
-                            }}
-                        }}
-                    }}
-
-                    public partial class TransactionManaged : I{settings.RepositoryName}
-                    {{
-                        // Didn't use underscores to make it easier to reuse code referencing connection
-                        private SqlConnection connection;
-                        private SqlTransaction transaction;
-                        public TransactionManaged(SqlConnection connectionParameter, SqlTransaction transactionParameter)
-                        {{                            
-                            connection = connectionParameter;
-                            transaction = transactionParameter;                
-                        }}
-
-		                private object? ConvertDBNullToNull(object item)
-		                {{
-                            return item == DBNull.Value ? null : item;
-		                }}
-                        
-                        public async Task RunTransaction(Func<TransactionManagedContext, Task<TransactionResult>> action)
-                        {{
-                            // I hate to do this, but don't see a great alternative
-                            await Task.Run(() => throw new NotImplementedException());
-                        }}
-                    }}
-
-	            }}", settings.Namespace, true)
+                $"{settings.RepositoryName}.generated.cs", 
+                WrapInNamespace(content, settings.Namespace, true)
             )
         };
     }
@@ -221,28 +133,7 @@ public class Generator
         {
             (
                 $"Fake/Fake{settings.RepositoryName}.generated.cs",
-                WrapInNamespace(
-                    $@"public partial class Fake{settings.RepositoryName} : I{settings.RepositoryName} 
-	            {{
-		            
-		            public Fake{settings.RepositoryName}() 
-		            {{
-		            }}
-
-                    public async Task RunTransaction(Func<TransactionManagedContext, Task<TransactionResult>> action)
-                    {{
-                        // Can't easily make a transaction for fakes. So just running from this class
-                        using (var connection = new SqlConnection())
-                        {{
-                            using (var transaction = connection.BeginTransaction())
-                            {{
-                                var context = new TransactionManagedContext(this, connection, transaction); 
-                                await action.Invoke(context);
-                            }}
-                        }}
-                    }}
-
-	            }}", settings.Namespace + ".Fake", true, settings.Namespace)
+                WrapInNamespace(string.Format(repoClassTemplate, settings.RepositoryName), settings.Namespace + ".Fake", true, settings.Namespace)
             )
         };
     }
