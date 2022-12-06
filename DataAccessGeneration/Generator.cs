@@ -624,7 +624,7 @@ public class Generator
         if (parameters.Any() && parameters.Count < 4)
         {
             var parameterList = string.Join(", ", parameters.Select(p => p.CSharpType(userDefinedTypeNames) + " " + p.CSharpPropertyName().ToCamelCase()));
-            var propertyAssignmentList = string.Join(",\r\n", parameters.Select(p => p.CSharpPropertyName() + " = " + p.CSharpPropertyName().ToCamelCase()));
+            var propertyAssignmentList = string.Join(","+Environment.NewLine, parameters.Select(p => p.CSharpPropertyName() + " = " + p.CSharpPropertyName().ToCamelCase()));
             var returnLine = resultMetaData.ReturnType != ReturnType.None
                 ? $"return await {procName}(parameters);"
                 : $"await {procName}(parameters);";
@@ -690,7 +690,7 @@ public class Generator
                                 dt{p.CSharpPropertyName()}.Rows.Add(new object?[]
                                 {{
                                     {
-                                        string.Join(",\r\n", udtTypeColumns.Select(dt => $@"(object?)p.{dt.ColumnName} ?? DBNull.Value"))
+                                        string.Join(","+Environment.NewLine, udtTypeColumns.Select(dt => $@"(object?)p.{dt.ColumnName} ?? DBNull.Value"))
                                     }
                                 }}));"
                         );

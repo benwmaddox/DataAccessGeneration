@@ -32,7 +32,7 @@ public static class StringManipulation
             }
         }
         
-        return String.Join("\r\n", splits);
+        return String.Join(Environment.NewLine, splits);
     }
     public static string IndentBasedOnBraces(this string input, int startingIndent = 0)
     {
@@ -45,7 +45,7 @@ public static class StringManipulation
             var trimmed = line.Trim();
             if (trimmed.Length == 0)
             {
-                result.Append("\r\n");
+                result.Append(Environment.NewLine);
             }
             else
             {
@@ -54,7 +54,7 @@ public static class StringManipulation
                 {
                     indentLevel--;
                 }
-                result.Append(string.Join("", Enumerable.Repeat("    ", indentLevel)) + trimmed + "\r\n");
+                result.Append(string.Join("", Enumerable.Repeat("    ", indentLevel)) + trimmed + Environment.NewLine);
             }
             if (trimmed.StartsWith("}"))
             {
