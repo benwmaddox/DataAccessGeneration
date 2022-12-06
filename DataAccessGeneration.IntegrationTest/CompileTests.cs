@@ -76,8 +76,8 @@ public class CompileTests
         var errors = result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error || (d.Severity == DiagnosticSeverity.Warning && d.Id != "CS1701") );
         if (errors?.Any() ?? false)
         {
-            Console.WriteLine(string.Join(",", errors.Select(x => x.ToString() + "\r\n" + x.Location.SourceTree)));
-            throw new Exception(string.Join(",", errors.Select(x => x.ToString() + "\r\n" + x.Location.SourceTree)));
+            Console.WriteLine(string.Join(",", errors.Select(x => x.ToString() + Environment.NewLine + x.Location.SourceTree)));
+            throw new Exception(string.Join(",", errors.Select(x => x.ToString() + Environment.NewLine + x.Location.SourceTree)));
         }
         Assert.True(result.Success);
     }
