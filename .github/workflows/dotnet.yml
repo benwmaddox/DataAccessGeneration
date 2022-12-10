@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-     services:
+    services:
       mssql:
         image: mcr.microsoft.com/mssql/server:2019-latest
         env:
