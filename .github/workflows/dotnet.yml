@@ -25,7 +25,7 @@ jobs:
     - uses: azure/sql-action@v1
       with:
         server-name: 'localhost'
-        connection-string: 'Server=localhost,1433;Database=master;Integrated Security=false;User Id=sa;Password=qXx)cYvSHJlRW0{e>uZJG8u;Persist Security Info=True;MultipleActiveResultSets=true;Application Name=DataAccessGeneration'
+        connection-string: 'Server=localhost,1433;Initial Catalog=master;Integrated Security=false;User Id=sa;Password=qXx)cYvSHJlRW0{e>uZJG8u;Persist Security Info=True;MultipleActiveResultSets=true;Application Name=DataAccessGeneration'
         sql-file: './DataAccessGeneration.IntegrationTest/Northwind/instnwnd.sql'
     
     - name: Setup .NET
