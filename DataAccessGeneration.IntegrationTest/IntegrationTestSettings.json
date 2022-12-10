@@ -1,6 +1,6 @@
 [
   {
-    "ConnectionString": "Server=.\\SQLExpress;Database=Northwind;Integrated Security=false;User Id=sa;password=qXx)cYvSHJlRW0{e>uZJG8u;Persist Security Info=True;MultipleActiveResultSets=true;Application Name=DataAccessGeneration",
+    "ConnectionString": "Server=localhost:1433;Database=Northwind;Integrated Security=false;User Id=sa;password=qXx)cYvSHJlRW0{e>uZJG8u;Persist Security Info=True;MultipleActiveResultSets=true;Application Name=DataAccessGeneration",
     "SchemaName": "dbo",
     "Namespace": "DataAccessGeneration.Example.Northwind",
     "OutputRelativePath": "../Repositories/Northwind",
