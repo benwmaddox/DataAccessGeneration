@@ -22,6 +22,12 @@ jobs:
           - 1433:1433
     steps:
     - uses: actions/checkout@v3
+    - uses: azure/sql-action@v1
+       with:
+        server-name: 'localhost'
+        connection-string: 'Server=localhost,1433;Database=master;Integrated Security=false;User Id=sa;Password=qXx)cYvSHJlRW0{e>uZJG8u;Persist Security Info=True;MultipleActiveResultSets=true;Application Name=DataAccessGeneration'
+        sql-file: './DataAccessGeneration.IntegrationTest/Northwind/instnwnd.sql'
+    
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
@@ -30,5 +36,9 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
+    - name: Unit Test
+      run: dotnet test DataAccessGeneration.XUnitTest --no-build --verbosity normal
+      
+    - name: Integration Test
+      run: dotnet test DataAccessGeneration.IntegrationTest --no-build --verbosity normal
+  
