@@ -8,33 +8,34 @@ namespace DataAccessGeneration
 		public static string SQLDBType(this ParameterDefinition p) => getSqlDbTypeEnumFromSQLType(p.TypeName);
 		public static string getSqlDbTypeEnumFromSQLType(string typeName)
 		{
-			if (typeName == "varchar") return "VarChar";
-			if (typeName == "nvarchar") return "NVarChar";
-			if (typeName == "int") return "Int";
-			if (typeName == "tinyint") return "TinyInt";
-			if (typeName == "smallint") return "SmallInt";
-			if (typeName == "bit") return "Bit";
-			if (typeName == "uniqueidentifier") return "UniqueIdentifier";
-			if (typeName == "datetime") return "DateTime";
-			if (typeName == "datetime2") return "None";
+			
+			if (typeName == "varchar") return nameof(SqlDbType.VarChar);
+			if (typeName == "nvarchar") return nameof(SqlDbType.NVarChar);
+			if (typeName == "int") return nameof(SqlDbType.Int);
+			if (typeName == "tinyint") return nameof(SqlDbType.TinyInt);
+			if (typeName == "smallint") return nameof(SqlDbType.SmallInt);
+			if (typeName == "bit") return nameof(SqlDbType.Bit);
+			if (typeName == "uniqueidentifier") return nameof(SqlDbType.UniqueIdentifier);
+			if (typeName == "datetime") return nameof(SqlDbType.DateTime);
+			if (typeName == "datetime2") return nameof(SqlDbType.DateTime2);
 			if (typeName == "datetimeoffset") return nameof(SqlDbType.DateTimeOffset);
 			if (typeName == "char") return nameof(SqlDbType.Char);
-			if (typeName == "date") return "Date";
-			if (typeName == "smalldatetime") return "SmallDateTime";
-			if (typeName == "decimal") return "Decimal";
-			if (typeName == "numeric") return "Decimal";
-			if (typeName == "nvarchar") return "NVarChar";
-			if (typeName == "sysname") return "VarChar";
-			if (typeName == "text") return "Text";
-			if (typeName == "ntext") return "Text";
-			if (typeName == "float") return "Float";
-			if (typeName == "binary") return "Binary";
-			if (typeName == "varbinary") return "VarBinary";
-			if (typeName == "money") return "Money";
-			if (typeName == "bigint") return "BigInt";
-			if (typeName == "real") return "Real";
-			if (typeName == "sql_variant") return "SQLVariant";
-			if (typeName == "image") return "Image";
+			if (typeName == "date") return nameof(SqlDbType.Date);
+			if (typeName == "smalldatetime") return nameof(SqlDbType.SmallDateTime);
+			if (typeName == "decimal") return nameof(SqlDbType.Decimal);
+			if (typeName == "numeric") return nameof(SqlDbType.Decimal);
+			if (typeName == "nvarchar") return nameof(SqlDbType.NVarChar);
+			if (typeName == "sysname") return nameof(SqlDbType.VarChar);
+			if (typeName == "text") return nameof(SqlDbType.Text);
+			if (typeName == "ntext") return nameof(SqlDbType.Text);
+			if (typeName == "float") return nameof(SqlDbType.Float);
+			if (typeName == "binary") return nameof(SqlDbType.Binary);
+			if (typeName == "varbinary") return nameof(SqlDbType.VarBinary);
+			if (typeName == "money") return nameof(SqlDbType.Money);
+			if (typeName == "bigint") return nameof(SqlDbType.BigInt);
+			if (typeName == "real") return nameof(SqlDbType.Real);
+			if (typeName == "sql_variant") return nameof(SqlDbType.Variant);
+			if (typeName == "image") return nameof(SqlDbType.Image);
 			if (typeName == "hierarchyid") return nameof(SqlDbType.Binary);
 			if (typeName == "geometry") return nameof(SqlDbType.Binary);
 			if (typeName == "nchar") return nameof(SqlDbType.NChar);
@@ -132,42 +133,49 @@ namespace DataAccessGeneration
 
 		public static string getCSharpTypeFromSQLType(string typeName, short? maxLength = null, byte? precision = null, byte? scale = null, bool? isNullable = true, List<string>? userDefinedTypes = null)
 		{
-			if (typeName == "varchar") return "string" + (isNullable == true ? "?" : "");
-			if (typeName == "nvarchar") return "string" + (isNullable == true ? "?" : "");
-			if (typeName == "int") return "int" + (isNullable == true ? "?" : "");
-			if (typeName == "tinyint") return "byte" + (isNullable == true ? "?" : "");
-			if (typeName == "smallint") return "short" + (isNullable == true ? "?" : "");
-			if (typeName == "bit") return "bool" + (isNullable == true ? "?" : "");
-			if (typeName == "uniqueidentifier") return "Guid" + (isNullable == true ? "?" : "");
-			if (typeName == "datetime") return "DateTime" + (isNullable == true ? "?" : "");
-			if (typeName == "datetime2") return "DateTime" + (isNullable == true ? "?" : "");
-			if (typeName == "datetimeoffset") return "DateTimeOffset";
+			var cSharpToSqlConversion = new Dictionary<string, string>()
+			{
+				{ "varchar", "string" },
+				{ "nvarchar", "string" },
+				{ "int", "int" },
+				{ "tinyint", "byte" },
+				{ "smallint", "short" },
+				{ "bit", "bool" },
+				{ "uniqueidentifier", "Guid" },
+				{ "datetime", "DateTime" },
+				{ "datetime2", "DateTime" },
+				{ "datetimeoffset", "DateTimeOffset" },
 			// I expected it to be a char for single characters, but it seems ADO.net treats it as a string. 
 			// It could make sense if it is more than 1 character
-			if (typeName == "char") return "string" + (isNullable == true ? "?" : "");
-			if (typeName == "date") return "DateTime" + (isNullable == true ? "?" : "");
-			if (typeName == "smalldatetime") return "DateTime" + (isNullable == true ? "?" : "");
-			if (typeName == "decimal") return "decimal" + (isNullable == true ? "?" : "");
-			if (typeName == "numeric") return "decimal" + (isNullable == true ? "?" : "");
-			if (typeName == "sysname") return "string" + (isNullable == true ? "?" : "");
-			if (typeName == "text") return "string" + (isNullable == true ? "?" : "");
-			if (typeName == "ntext") return "string" + (isNullable == true ? "?" : "");
-			if (typeName == "float") return "double" + (isNullable == true ? "?" : "");
-			if (typeName == "binary") return "byte[]" + (isNullable == true ? "?" : "");
-			if (typeName == "varbinary") return "byte[]" + (isNullable == true ? "?" : "");
-			if (typeName == "money") return "decimal" + (isNullable == true ? "?" : "");
-			if (typeName == "bigint") return "long" + (isNullable == true ? "?" : "");
-			if (typeName == "real") return "float" + (isNullable == true ? "?" : "");
-			if (typeName == "sql_variant") return "object" + (isNullable == true ? "?" : "");
-			if (typeName == "image") return "object" + (isNullable == true ? "?" : "");
-			if (typeName == "hierarchyid") return "object" + (isNullable == true ? "?" : "");
-			if (typeName == "geometry") return "object" + (isNullable == true ? "?" : "");
-			if (typeName == "nchar") return "string" + (isNullable == true ? "?" : "");
-			if (typeName == "geography") return "object" + (isNullable == true ? "?" : "");
-			if (typeName == "smallmoney") return "object" + (isNullable == true ? "?" : "");
-			if (typeName == "timestamp") return "DateTime" + (isNullable == true ? "?" : "");
-			if (typeName == "time") return "TimeSpan" + (isNullable == true ? "?" : "");
-			if (typeName == "xml") return "string" + (isNullable == true ? "?" : "");
+				{ "char", "string" },
+				{ "date", "DateTime" },
+				{ "smalldatetime", "DateTime" },
+				{ "decimal", "decimal" },
+				{ "numeric", "decimal" },
+				{ "sysname", "string" },
+				{ "text", "string" },
+				{ "ntext", "string" },
+				{ "float", "double" },
+				{ "binary", "byte[]" },
+				{ "varbinary", "byte[]" },
+				{ "money", "decimal" },
+				{ "bigint", "long" },
+				{ "real", "float" },
+				{ "sql_variant", "object" },
+				{ "image", "object" },
+				{ "hierarchyid", "object" },
+				{ "geometry", "object" },
+				{ "nchar", "string" },
+				{ "geography", "object" },
+				{ "smallmoney", "object" },
+				{ "timestamp", "DateTime" },
+				{ "time", "TimeSpan" },
+				{ "xml", "string" },
+			};
+			if (cSharpToSqlConversion.ContainsKey(typeName))
+			{
+				return cSharpToSqlConversion[typeName] + (isNullable == true ? "?" : "");
+			}
 			if (userDefinedTypes != null && userDefinedTypes.Contains(typeName)) return $"List<{typeName}>" + (isNullable == true ? "?" : "");
 
 			throw new Exception("Unknown SQL TYPE: " + typeName);
