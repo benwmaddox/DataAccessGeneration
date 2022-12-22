@@ -20,45 +20,5 @@ do
 done
 rm testsqlconnection.sql
 
-for f in $dacpath/*
-do
-    if [ $f == $dacpath/*".dacpac" ]
-    then
-        dacpac="true"
-        echo "Found dacpac $f"
-    fi
-done
-
-for f in $sqlpath/*
-do
-    if [ $f == $sqlpath/*".sql" ]
-    then
-        sqlfiles="true"
-        echo "Found SQL file $f"
-    fi
-done
-
-if [ $sqlfiles == "true" ]
-then
-    for f in $sqlpath/*
-    do
-        if [ $f == $sqlpath/*".sql" ]
-        then
-            echo "Executing $f"
-            /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $SApassword -d master -i $f
-        fi
-    done
-fi
-
-if [ $dacpac == "true" ] 
-then
-    for f in $dacpath/*
-    do
-        if [ $f == $dacpath/*".dacpac" ]
-        then
-            dbname=$(basename $f ".dacpac")
-            echo "Deploying dacpac $f"
-            /opt/sqlpackage/sqlpackage /Action:Publish /SourceFile:$f /TargetServerName:localhost /TargetDatabaseName:$dbname /TargetUser:sa /TargetPassword:$SApassword
-        fi
-    done
-fi
+#/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $SApassword -d master -i ./.devcontainer/mssql/setup.sql 
+/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $SApassword -d master -i ./DataAccessGeneration.IntegrationTest/Northwind/instnwnd.sql
