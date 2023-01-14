@@ -2,7 +2,6 @@
 using Xunit;
 
 namespace DataAccessGeneration.XUnitTest;
-
 public class ProcedureParsing
 {
     [Fact]
