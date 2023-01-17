@@ -12,8 +12,12 @@ SELECT p.name FROM sys.procedures p
 JOIN sys.schemas s ON p.schema_id = s.schema_id
 WHERE s.name = @schemaName";
         var parser = new ScriptParsing();
-        var result = parser.FindParametersInQuery(query);
-        Assert.NotNull(result);
-        
+        var result = parser.FindErrorsInQuery(query);
+        Assert.Empty(result);
+
+        var parameters = parser.FindParametersInQuery(query);
+        Assert.Empty(parameters);
+        Assert.Equal("schemaName", parameters[0]);
+
     }
 }
