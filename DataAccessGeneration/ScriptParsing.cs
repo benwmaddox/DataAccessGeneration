@@ -1,12 +1,19 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
+public class ResultSetDef
+{
+    public List<TableDef> Tables = new List<TableDef>();
+    public List<ReturnColumnDef> ReturnColumns = new List<ReturnColumnDef>();
+    public List<VariableDef> VariableDefinitions = new List<VariableDef>();
+}
 public class Visitor : TSqlFragmentVisitor
 {
     public List<string> Results = new List<string>();
     
-    public List<TableDef> Tables = new List<TableDef>();
-    public List<ReturnColumnDef> ReturnColumns = new List<ReturnColumnDef>();
-    public List<VariableDef> WhereClauses = new List<VariableDef>();
+    // public List<TableDef> Tables = new List<TableDef>();
+    // public List<ReturnColumnDef> ReturnColumns = new List<ReturnColumnDef>();
+    // public List<VariableDef> VariableDefinitions = new List<VariableDef>();
+    public List<ResultSetDef> ResultSets = new List<ResultSetDef>();
     
     public override void Visit(SelectStatement node)
     {
@@ -20,7 +27,97 @@ public class Visitor : TSqlFragmentVisitor
         QuerySpecification? querySpecification = node.QueryExpression as QuerySpecification;
 
         FromClause? fromClause = querySpecification?.FromClause;
-        List<TableDef>? tableItems = fromClause?.TableReferences.SelectMany(fc => fc switch
+        var resultSet = new ResultSetDef()
+        {
+            Tables = FindTableDefs(fromClause) ?? new List<TableDef>(),
+            ReturnColumns = FindReturnColumns(querySpecification) ?? new List<ReturnColumnDef>(),
+            VariableDefinitions = FindWhereClauses(querySpecification) ?? new List<VariableDef>()
+        };
+        // List<TableDef>? tableItems = FindTableDefs(fromClause);
+        // if (tableItems != null)
+        // {
+        //     Tables.AddRange(tableItems);
+        // }
+        // // Collect the return columns
+        // List<ReturnColumnDef>? returnColumns = FindReturnColumns(querySpecification);
+        // if (returnColumns != null)
+        // {
+        //     ReturnColumns.AddRange(returnColumns);
+        // }
+        // // Collect the where clause
+        // List<VariableDef>? whereClauses = FindWhereClauses(querySpecification);
+        // if (whereClauses != null)
+        // {
+        //     VariableDefinitions.AddRange(whereClauses);
+        // }
+        ResultSets.Add(resultSet);
+        
+        
+        // There could be more than one TableReference!
+        // TableReference is not sure to be a NamedTableReference, could be as example a QueryDerivedTable
+        NamedTableReference? namedTableReference = fromClause?.TableReferences[0] as NamedTableReference;
+        QualifiedJoin? qualifiedJoin = fromClause?.TableReferences[0] as QualifiedJoin;
+        TableReferenceWithAlias? tableReferenceWithAlias = fromClause?.TableReferences[0] as TableReferenceWithAlias;
+        string? baseIdentifier = namedTableReference?.SchemaObject.BaseIdentifier?.Value;
+        string? schemaIdentifier = namedTableReference?.SchemaObject.SchemaIdentifier?.Value;
+        string? databaseIdentifier = namedTableReference?.SchemaObject.DatabaseIdentifier?.Value;
+        string? serverIdentifier = namedTableReference?.SchemaObject.ServerIdentifier?.Value;
+        string? alias = tableReferenceWithAlias?.Alias?.Value;
+        Console.WriteLine("From:");
+        Console.WriteLine($"  {"Server:",-10} {serverIdentifier}");
+        Console.WriteLine($"  {"Database:",-10} {databaseIdentifier}");
+        Console.WriteLine($"  {"Schema:",-10} {schemaIdentifier}");
+        Console.WriteLine($"  {"Table:",-10} {baseIdentifier}"); Console.WriteLine($"  {"Alias:",-10} {alias}");
+    }
+
+    private List<VariableDef>? FindWhereClauses(QuerySpecification? querySpecification)
+    {
+        return querySpecification?.WhereClause.SearchCondition switch
+        {
+            BooleanBinaryExpression booleanBinaryExpression => throw new NotImplementedException(),
+            BooleanComparisonExpression booleanComparisonExpression => new List<VariableDef>()
+            {
+                new VariableDef("", null, null, null)
+            },
+            BooleanExpressionSnippet booleanExpressionSnippet => throw new NotImplementedException(),
+            BooleanIsNullExpression booleanIsNullExpression => throw new NotImplementedException(),
+            BooleanNotExpression booleanNotExpression => throw new NotImplementedException(),
+            BooleanParenthesisExpression booleanParenthesisExpression => throw new NotImplementedException(),
+            BooleanTernaryExpression booleanTernaryExpression => throw new NotImplementedException(),
+            DistinctPredicate distinctPredicate => throw new NotImplementedException(),
+            EventDeclarationCompareFunctionParameter eventDeclarationCompareFunctionParameter => throw new NotImplementedException(),
+            ExistsPredicate existsPredicate => throw new NotImplementedException(),
+            FullTextPredicate fullTextPredicate => throw new NotImplementedException(),
+            GraphMatchCompositeExpression graphMatchCompositeExpression => throw new NotImplementedException(),
+            GraphMatchExpression graphMatchExpression => throw new NotImplementedException(),
+            GraphMatchLastNodePredicate graphMatchLastNodePredicate => throw new NotImplementedException(),
+            GraphMatchNodeExpression graphMatchNodeExpression => throw new NotImplementedException(),
+            GraphMatchPredicate graphMatchPredicate => throw new NotImplementedException(),
+            GraphMatchRecursivePredicate graphMatchRecursivePredicate => throw new NotImplementedException(),
+            GraphRecursiveMatchQuantifier graphRecursiveMatchQuantifier => throw new NotImplementedException(),
+            InPredicate inPredicate => throw new NotImplementedException(),
+            LikePredicate likePredicate => throw new NotImplementedException(),
+            SubqueryComparisonPredicate subqueryComparisonPredicate => throw new NotImplementedException(),
+            TSEqualCall tsEqualCall => throw new NotImplementedException(),
+            UpdateCall updateCall => throw new NotImplementedException(),
+            _ => throw new ArgumentOutOfRangeException()
+        };
+    }
+
+    private List<ReturnColumnDef>? FindReturnColumns(QuerySpecification? querySpecification)
+    {
+        return querySpecification?.SelectElements.Select(x => x switch
+        {
+            SelectScalarExpression selectScalarExpression => new ReturnColumnDef("", selectScalarExpression?.ColumnName?.Value ?? "???", ""),
+            SelectSetVariable selectSetVariable => new ReturnColumnDef("", selectSetVariable.Variable.Name, ""),
+            SelectStarExpression selectStarExpression => throw new NotImplementedException("selectStarExpression"),
+            _ => throw new ArgumentOutOfRangeException(nameof(x))
+        }).ToList();
+    }
+
+    private List<TableDef>? FindTableDefs(FromClause? fromClause)
+    {
+        return fromClause?.TableReferences.SelectMany(fc => fc switch
         {
             JoinParenthesisTableReference joinParenthesisTableReference => throw new NotImplementedException(),
             BuiltInFunctionTableReference builtInFunctionTableReference => throw new NotImplementedException(),
@@ -59,21 +156,6 @@ public class Visitor : TSqlFragmentVisitor
             TableReferenceWithAlias tableReferenceWithAlias1 => throw new NotImplementedException(),
             _ => throw new ArgumentOutOfRangeException(nameof(fc))
         }).ToList();
-        // There could be more than one TableReference!
-        // TableReference is not sure to be a NamedTableReference, could be as example a QueryDerivedTable
-        NamedTableReference? namedTableReference = fromClause?.TableReferences[0] as NamedTableReference;
-        QualifiedJoin? qualifiedJoin = fromClause?.TableReferences[0] as QualifiedJoin;
-        TableReferenceWithAlias? tableReferenceWithAlias = fromClause?.TableReferences[0] as TableReferenceWithAlias;
-        string? baseIdentifier = namedTableReference?.SchemaObject.BaseIdentifier?.Value;
-        string? schemaIdentifier = namedTableReference?.SchemaObject.SchemaIdentifier?.Value;
-        string? databaseIdentifier = namedTableReference?.SchemaObject.DatabaseIdentifier?.Value;
-        string? serverIdentifier = namedTableReference?.SchemaObject.ServerIdentifier?.Value;
-        string? alias = tableReferenceWithAlias?.Alias?.Value;
-        Console.WriteLine("From:");
-        Console.WriteLine($"  {"Server:",-10} {serverIdentifier}");
-        Console.WriteLine($"  {"Database:",-10} {databaseIdentifier}");
-        Console.WriteLine($"  {"Schema:",-10} {schemaIdentifier}");
-        Console.WriteLine($"  {"Table:",-10} {baseIdentifier}"); Console.WriteLine($"  {"Alias:",-10} {alias}");
     }
 
     private TableDef ToTableDef(TableReference table)
@@ -152,7 +234,7 @@ public class ScriptParsing
         
         return errors.Select(x => x.Message).ToList();
     }
-    public IList<string> FindParametersInQuery(string query)
+    public List<ResultSetDef> FindParametersInQuery(string query)
     {
         // using scriptdom, find all parameters in the query
         var parser = new TSql120Parser(true);
@@ -173,7 +255,7 @@ public class ScriptParsing
         // }
         // return errors.Select(x => x.Message).ToList();
         // return tokens.Select(x => x.TokenType.ToString().PadRight(30) + x.Text).ToList();
-        return visitor.Results;
+        return visitor.ResultSets;
     }
     
 }
