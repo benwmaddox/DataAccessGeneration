@@ -77,7 +77,8 @@ public class Visitor : TSqlFragmentVisitor
             BooleanBinaryExpression booleanBinaryExpression => throw new NotImplementedException(),
             BooleanComparisonExpression booleanComparisonExpression => new List<VariableDef>()
             {
-                new VariableDef("", null, null, null)
+                MergeVariableDef(ToVariableDef(booleanComparisonExpression.FirstExpression), ToVariableDef(booleanComparisonExpression.SecondExpression))
+                
             },
             BooleanExpressionSnippet booleanExpressionSnippet => throw new NotImplementedException(),
             BooleanIsNullExpression booleanIsNullExpression => throw new NotImplementedException(),
@@ -101,6 +102,78 @@ public class Visitor : TSqlFragmentVisitor
             TSEqualCall tsEqualCall => throw new NotImplementedException(),
             UpdateCall updateCall => throw new NotImplementedException(),
             _ => throw new ArgumentOutOfRangeException()
+        };
+    }
+
+    private VariableDef MergeVariableDef(params VariableDef[] variableDef)
+    {
+        VariableDef result = variableDef.Last();
+        // reverse for loop where we make a new variable def and each property is either the existing value (if not null) or the value from the next item
+        for (int i = variableDef.Length - 2; i >= 0; i--)
+        {
+            VariableDef current = variableDef[i];
+            result = new VariableDef(result.Name ?? current.Name,
+                result.Type ?? current.Type,
+                result.MatchingTableAlias ?? current.MatchingTableAlias,
+                result.MatchingColumn ?? current.MatchingColumn);
+        }
+        
+        return result;
+    }
+
+    private VariableDef ToVariableDef(ScalarExpression expression)
+    {
+        return expression switch
+        {
+            BinaryExpression binaryExpression => throw new NotImplementedException(),
+            AtTimeZoneCall atTimeZoneCall => throw new NotImplementedException(),
+            BinaryLiteral binaryLiteral => throw new NotImplementedException(),
+            SearchedCaseExpression searchedCaseExpression => throw new NotImplementedException(),
+            SimpleCaseExpression simpleCaseExpression => throw new NotImplementedException(),
+            CaseExpression caseExpression => throw new NotImplementedException(),
+            CastCall castCall => throw new NotImplementedException(),
+            CoalesceExpression coalesceExpression => throw new NotImplementedException(),
+            ColumnReferenceExpression columnReferenceExpression => new VariableDef(null, columnReferenceExpression.ToString(), columnReferenceExpression.ToString(), columnReferenceExpression.ToString()),
+            ConvertCall convertCall => throw new NotImplementedException(),
+            DefaultLiteral defaultLiteral => throw new NotImplementedException(),
+            ExtractFromExpression extractFromExpression => throw new NotImplementedException(),
+            FunctionCall functionCall => throw new NotImplementedException(),
+            GlobalVariableExpression globalVariableExpression => throw new NotImplementedException(),
+            IdentifierLiteral identifierLiteral => throw new NotImplementedException(),
+            IdentityFunctionCall identityFunctionCall => throw new NotImplementedException(),
+            IIfCall ifCall => throw new NotImplementedException(),
+            IntegerLiteral integerLiteral => throw new NotImplementedException(),
+            JsonKeyValue jsonKeyValue => throw new NotImplementedException(),
+            LeftFunctionCall leftFunctionCall => throw new NotImplementedException(),
+            MaxLiteral maxLiteral => throw new NotImplementedException(),
+            MoneyLiteral moneyLiteral => throw new NotImplementedException(),
+            NullLiteral nullLiteral => throw new NotImplementedException(),
+            NumericLiteral numericLiteral => throw new NotImplementedException(),
+            OdbcLiteral odbcLiteral => throw new NotImplementedException(),
+            RealLiteral realLiteral => throw new NotImplementedException(),
+            StringLiteral stringLiteral => throw new NotImplementedException(),
+            Literal literal => throw new NotImplementedException(),
+            NextValueForExpression nextValueForExpression => throw new NotImplementedException(),
+            NullIfExpression nullIfExpression => throw new NotImplementedException(),
+            OdbcConvertSpecification odbcConvertSpecification => throw new NotImplementedException(),
+            OdbcFunctionCall odbcFunctionCall => throw new NotImplementedException(),
+            ParameterlessCall parameterlessCall => throw new NotImplementedException(),
+            ParenthesisExpression parenthesisExpression => throw new NotImplementedException(),
+            ParseCall parseCall => throw new NotImplementedException(),
+            PartitionFunctionCall partitionFunctionCall => throw new NotImplementedException(),
+            RightFunctionCall rightFunctionCall => throw new NotImplementedException(),
+            ScalarSubquery scalarSubquery => throw new NotImplementedException(),
+            TryCastCall tryCastCall => throw new NotImplementedException(),
+            TryConvertCall tryConvertCall => throw new NotImplementedException(),
+            TryParseCall tryParseCall => throw new NotImplementedException(),
+            UserDefinedTypePropertyAccess userDefinedTypePropertyAccess => throw new NotImplementedException(),
+            VariableReference variableReference => new VariableDef(variableReference.Name, null, null, null),
+            ValueExpression valueExpression => throw new NotImplementedException(),
+            PrimaryExpression primaryExpression => throw new NotImplementedException(),
+            ScalarExpressionSnippet scalarExpressionSnippet => throw new NotImplementedException(),
+            SourceDeclaration sourceDeclaration => throw new NotImplementedException(),
+            UnaryExpression unaryExpression => throw new NotImplementedException(),
+            _ => throw new ArgumentOutOfRangeException(nameof(expression))
         };
     }
 
@@ -220,7 +293,7 @@ public record TableDef
 
 public record ReturnColumnDef(string TableAlias, string Column, string Alias);
 
-public record VariableDef(string Name, string? Type, string? MatchingTableAlias, string? MatchingColumn);
+public record VariableDef(string? Name, string? Type, string? MatchingTableAlias, string? MatchingColumn);
 
 public class ScriptParsing
 {
