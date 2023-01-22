@@ -1,4 +1,6 @@
+using Microsoft.SqlServer.Dac.Model;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using Newtonsoft.Json;
 
 public class ResultSetDef
 {
@@ -17,8 +19,45 @@ public class Visitor : TSqlFragmentVisitor
     
     public override void Visit(SelectStatement node)
     {
+        var json = JsonConvert.SerializeObject(node);
         // TODO: use this to find the uses of variables and what they reference
         var spec = node.QueryExpression as QuerySpecification;
+        if (spec == null) return;
+        List<string?> columnNames = new List<string?>();
+        foreach (var column in spec.SelectElements)
+        {
+            columnNames.AddRange( column switch
+            {
+                SelectScalarExpression selectScalarExpression => new string?[]
+                {
+                    selectScalarExpression.ColumnName?.Value,
+                    (selectScalarExpression.Expression as ColumnReferenceExpression)?.MultiPartIdentifier.Identifiers.LastOrDefault()?.Value
+                },
+                SelectSetVariable selectSetVariable => throw new NotImplementedException(),
+                SelectStarExpression selectStarExpression => throw new NotImplementedException(),
+                _ => throw new ArgumentOutOfRangeException(nameof(column))
+            });
+        }
+
+        List<string?> fromTableNames = new List<string?>();
+        foreach (var fromClauseItem in spec.FromClause.TableReferences)
+        {
+            fromTableNames.AddRange( fromClauseItem switch
+            {
+                NamedTableReference namedTableReference => new string[]{ namedTableReference.SchemaObject.BaseIdentifier.Value},
+                QualifiedJoin qualifiedJoin => new string?[]{ (qualifiedJoin.FirstTableReference as NamedTableReference)?.SchemaObject.BaseIdentifier.Value, (qualifiedJoin.SecondTableReference as NamedTableReference)?.SchemaObject.BaseIdentifier.Value},
+                // TableSample tableSample => throw new NotImplementedException(),
+                UnqualifiedJoin unqualifiedJoin => throw new NotImplementedException(),
+                _ => throw new ArgumentOutOfRangeException(nameof(fromClauseItem))
+            });
+        }
+
+        // foreach (var VARIABLE in spec.WhereClause.SearchCondition)
+        // {
+        //     
+        // }
+        //https://crismorris.wordpress.com/2015/04/12/scriptdom-part-3-the-parser/
+        //https://crismorris.wordpress.com/category/scriptdom/
         Results.Add("Where clause: "+ spec?.WhereClause?.SearchCondition.ToString());
         // spec.FromClause.PredictTableReference.Select(x => x.DataSource.)
         
@@ -53,23 +92,23 @@ public class Visitor : TSqlFragmentVisitor
         ResultSets.Add(resultSet);
         
         
-        // There could be more than one TableReference!
-        // TableReference is not sure to be a NamedTableReference, could be as example a QueryDerivedTable
-        NamedTableReference? namedTableReference = fromClause?.TableReferences[0] as NamedTableReference;
-        QualifiedJoin? qualifiedJoin = fromClause?.TableReferences[0] as QualifiedJoin;
-        TableReferenceWithAlias? tableReferenceWithAlias = fromClause?.TableReferences[0] as TableReferenceWithAlias;
-        string? baseIdentifier = namedTableReference?.SchemaObject.BaseIdentifier?.Value;
-        string? schemaIdentifier = namedTableReference?.SchemaObject.SchemaIdentifier?.Value;
-        string? databaseIdentifier = namedTableReference?.SchemaObject.DatabaseIdentifier?.Value;
-        string? serverIdentifier = namedTableReference?.SchemaObject.ServerIdentifier?.Value;
-        string? alias = tableReferenceWithAlias?.Alias?.Value;
-        Console.WriteLine("From:");
-        Console.WriteLine($"  {"Server:",-10} {serverIdentifier}");
-        Console.WriteLine($"  {"Database:",-10} {databaseIdentifier}");
-        Console.WriteLine($"  {"Schema:",-10} {schemaIdentifier}");
-        Console.WriteLine($"  {"Table:",-10} {baseIdentifier}"); Console.WriteLine($"  {"Alias:",-10} {alias}");
+        // // There could be more than one TableReference!
+        // // TableReference is not sure to be a NamedTableReference, could be as example a QueryDerivedTable
+        // NamedTableReference? namedTableReference = fromClause?.TableReferences[0] as NamedTableReference;
+        // QualifiedJoin? qualifiedJoin = fromClause?.TableReferences[0] as QualifiedJoin;
+        // TableReferenceWithAlias? tableReferenceWithAlias = fromClause?.TableReferences[0] as TableReferenceWithAlias;
+        // string? baseIdentifier = namedTableReference?.SchemaObject.BaseIdentifier?.Value;
+        // string? schemaIdentifier = namedTableReference?.SchemaObject.SchemaIdentifier?.Value;
+        // string? databaseIdentifier = namedTableReference?.SchemaObject.DatabaseIdentifier?.Value;
+        // string? serverIdentifier = namedTableReference?.SchemaObject.ServerIdentifier?.Value;
+        // string? alias = tableReferenceWithAlias?.Alias?.Value;
+        // Console.WriteLine("From:");
+        // Console.WriteLine($"  {"Server:",-10} {serverIdentifier}");
+        // Console.WriteLine($"  {"Database:",-10} {databaseIdentifier}");
+        // Console.WriteLine($"  {"Schema:",-10} {schemaIdentifier}");
+        // Console.WriteLine($"  {"Table:",-10} {baseIdentifier}"); Console.WriteLine($"  {"Alias:",-10} {alias}");
     }
-
+// sqlscriptgenerator is cool
     private List<VariableDef>? FindWhereClauses(QuerySpecification? querySpecification)
     {
         return querySpecification?.WhereClause.SearchCondition switch
@@ -309,15 +348,18 @@ public class ScriptParsing
     }
     public List<ResultSetDef> FindParametersInQuery(string query)
     {
+        
         // using scriptdom, find all parameters in the query
         var parser = new TSql120Parser(true);
         IList<ParseError> errors;
         
         var script = parser.Parse(new StringReader(query), out errors);
+        
+        
         var visitor = new Visitor();
         script.Accept(visitor);
         var tokens = script.ScriptTokenStream;
-        
+        // var model = new TSqlModel()
         // return tokens.Where(t => t.TokenType == TSqlTokenType.Identifier).Select(t => t.Text).ToList();
         // foreach (var token in tokens)
         // {
