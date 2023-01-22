@@ -174,9 +174,9 @@ public class Visitor : TSqlFragmentVisitor
             CastCall castCall => throw new NotImplementedException(),
             CoalesceExpression coalesceExpression => throw new NotImplementedException(),
             ColumnReferenceExpression columnReferenceExpression => new VariableDef(null, 
-                string.Join(" ",columnReferenceExpression.MultiPartIdentifier.Identifiers.Select(id => id.Value)), 
                 null, 
-                null),
+                columnReferenceExpression.MultiPartIdentifier.Identifiers.FirstOrDefault()?.Value, 
+                columnReferenceExpression.MultiPartIdentifier.Identifiers.LastOrDefault()?.Value),
             ConvertCall convertCall => throw new NotImplementedException(),
             DefaultLiteral defaultLiteral => throw new NotImplementedException(),
             ExtractFromExpression extractFromExpression => throw new NotImplementedException(),
@@ -224,7 +224,11 @@ public class Visitor : TSqlFragmentVisitor
     {
         return querySpecification?.SelectElements.Select(x => x switch
         {
-            SelectScalarExpression selectScalarExpression => new ReturnColumnDef("", selectScalarExpression?.ColumnName?.Value ?? "???", ""),
+            SelectScalarExpression selectScalarExpression => new ReturnColumnDef("", selectScalarExpression.ColumnName?.Value
+                                                                                     ?? (selectScalarExpression.Expression as ColumnReferenceExpression)?.MultiPartIdentifier.Identifiers.LastOrDefault()?.Value
+                ?? "???", ""),
+            
+                
             SelectSetVariable selectSetVariable => new ReturnColumnDef("", selectSetVariable.Variable.Name, ""),
             SelectStarExpression selectStarExpression => throw new NotImplementedException("selectStarExpression"),
             _ => throw new ArgumentOutOfRangeException(nameof(x))

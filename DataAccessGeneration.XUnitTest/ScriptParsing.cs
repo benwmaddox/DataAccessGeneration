@@ -21,12 +21,17 @@ WHERE s.name = @schemaName";
         // Assert.Equal("schemaName", parameters[0]);
         var firstResultSet = parameters.Single();
         Assert.Equal("@schemaName", firstResultSet.VariableDefinitions.Single().Name);
+        
         Assert.Equal(2, firstResultSet.Tables.Count);
         Assert.Equal("procedures", firstResultSet.Tables[0].Table);
         Assert.Equal("schemas", firstResultSet.Tables[1].Table);
         Assert.Single(firstResultSet.ReturnColumns);
         Assert.Equal("name", firstResultSet.ReturnColumns[0].Column);
-
+        
+        Assert.Equal("name", firstResultSet.VariableDefinitions.Single().MatchingColumn);
+        
+        Assert.Equal("s", firstResultSet.VariableDefinitions.Single().MatchingTableAlias);
+        // Assert.Equal("varchar(999)", firstResultSet.VariableDefinitions.Single().Type);
 
 
 
