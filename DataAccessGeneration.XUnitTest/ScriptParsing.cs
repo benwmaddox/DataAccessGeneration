@@ -1,3 +1,4 @@
+using System.Linq;
 using Xunit;
 
 namespace DataAccessGeneration.XUnitTest;
@@ -16,8 +17,18 @@ WHERE s.name = @schemaName";
         Assert.Empty(result);
 
         var parameters = parser.FindParametersInQuery(query);
-        Assert.Empty(parameters);
+        // Assert.Empty(parameters);
         // Assert.Equal("schemaName", parameters[0]);
+        var firstResultSet = parameters.Single();
+        Assert.Equal("@schemaName", firstResultSet.VariableDefinitions.Single().Name);
+        Assert.Equal(2, firstResultSet.Tables.Count);
+        Assert.Equal("procedures", firstResultSet.Tables[0].Table);
+        Assert.Equal("schemas", firstResultSet.Tables[1].Table);
+        Assert.Single(firstResultSet.ReturnColumns);
+        Assert.Equal("name", firstResultSet.ReturnColumns[0].Column);
+
+
+
 
     }
 }

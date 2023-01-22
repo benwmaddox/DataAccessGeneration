@@ -51,6 +51,7 @@ public class Visitor : TSqlFragmentVisitor
                 _ => throw new ArgumentOutOfRangeException(nameof(fromClauseItem))
             });
         }
+        
 
         // foreach (var VARIABLE in spec.WhereClause.SearchCondition)
         // {
@@ -58,7 +59,7 @@ public class Visitor : TSqlFragmentVisitor
         // }
         //https://crismorris.wordpress.com/2015/04/12/scriptdom-part-3-the-parser/
         //https://crismorris.wordpress.com/category/scriptdom/
-        Results.Add("Where clause: "+ spec?.WhereClause?.SearchCondition.ToString());
+        // Results.Add("Where clause: "+ spec?.WhereClause?.SearchCondition.ToString());
         // spec.FromClause.PredictTableReference.Select(x => x.DataSource.)
         
         
@@ -172,7 +173,10 @@ public class Visitor : TSqlFragmentVisitor
             CaseExpression caseExpression => throw new NotImplementedException(),
             CastCall castCall => throw new NotImplementedException(),
             CoalesceExpression coalesceExpression => throw new NotImplementedException(),
-            ColumnReferenceExpression columnReferenceExpression => new VariableDef(null, columnReferenceExpression.ToString(), columnReferenceExpression.ToString(), columnReferenceExpression.ToString()),
+            ColumnReferenceExpression columnReferenceExpression => new VariableDef(null, 
+                string.Join(" ",columnReferenceExpression.MultiPartIdentifier.Identifiers.Select(id => id.Value)), 
+                null, 
+                null),
             ConvertCall convertCall => throw new NotImplementedException(),
             DefaultLiteral defaultLiteral => throw new NotImplementedException(),
             ExtractFromExpression extractFromExpression => throw new NotImplementedException(),
