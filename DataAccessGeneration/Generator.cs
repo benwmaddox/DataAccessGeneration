@@ -34,7 +34,7 @@ public class Generator
             Parallel.ForEach(procedures, _parallelOptions, (procedure, state, index) =>
             {
                 CurrentActivity = $"{settings.RepositoryName}: Loading procedure information {loadCompleted} of {procedures.Count}";
-                var parameters = dataLookup.GetParametersForProcedure(settings.SchemaName, procedure.Proc);
+                var parameters = dataLookup.GetParametersForProcedure(settings.SchemaName, procedure.GetName());
                 var results = dataLookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedure.Proc, parameters, allowProcedureExecution: true);
                 procedure.Return = results.Any() ? ReturnType.List : ReturnType.None;
                 if (Char.IsDigit(procedure.Proc[0]))
@@ -70,7 +70,7 @@ public class Generator
         {
             generateStarted++;
             CurrentActivity = $"{settings.RepositoryName} Generating procedure {generateStarted} of {procedures.Count}: {procedure.Proc}";
-            procedureClasses.Add(GenerateProcedure(procedure, userDefinedTypes, settings, dataLookup));
+            procedureClasses.Add(GenerateProcedureClass(procedure, userDefinedTypes, settings, dataLookup));
             if (settings.IncludeFakes)
             {
                 procedureClasses.Add(GenerateFakeForProcedure(procedure, userDefinedTypes, settings, dataLookup));
@@ -79,41 +79,67 @@ public class Generator
 
         });
         _fileManager.WriteFiles(outputDirectory, procedureClasses);
-        
-        if (settings.QueryList.Any())
+
+        generateStarted = 0;
+        var queryClasses = new List<(string RelativeFilePath, string FileContent)>();
+        Parallel.ForEach(settings.QueryList, _parallelOptions, (querySetting, state, index) =>
         {
-            CurrentActivity = $"{settings.RepositoryName}: Loading query information {0} of {settings.QueryList.Count}";
-            var scriptParsing = new ScriptParsing();
-            var tasks = new List<Task>();
-            foreach (var querySetting in settings.QueryList)
+            generateStarted++;
+            CurrentActivity = $"{settings.RepositoryName} Generating query {generateStarted} of {procedures.Count}: {querySetting.GetName()}";
+            ScriptParsing parsing = new ScriptParsing();
+            var errors = parsing.FindErrorsInQuery(querySetting.Query);
+            if (errors.Any())
             {
-                tasks.Add(Task.Run(() =>
-                {
-                    var errors = scriptParsing.FindErrorsInQuery(querySetting.Query);
-                    if (errors.Any())
-                    {
-                        Errors.AddRange(errors.Select(e => querySetting.Name + ": " + e));
-                    }
-                    var details = scriptParsing.FindStructureInQuery(querySetting.Query);
-                    var query = dataLookup.GetQuery(querySetting.Query);
-                    var parameters = scriptParsing.GetParameters(query);
-                    var results = dataLookup.GetResultDefinitionsForQuery(settings.SchemaName, querySetting.Query, parameters, allowProcedureExecution: true);
-                    querySetting.Return = results.Any() ? ReturnType.List : ReturnType.None;
-                    if (Char.IsDigit(querySetting.Query[0]))
-                    {
-                        querySetting.Name = "N" + querySetting.Query.Replace(" ", "_");
-                    }
-                }));
+                Errors.AddRange(errors.Select(e => querySetting.Name + ": " + e));
+                return;
             }
 
-            Task.WaitAll(tasks.ToArray());
-        }
+            var queryStructure = parsing.FindStructureInQuery(querySetting.Query);
+            queryClasses.Add(GenerateQueryClass(querySetting, queryStructure, userDefinedTypes, settings, dataLookup));
+            if (settings.IncludeFakes)
+            {
+                //TODO: queryClasses.Add(GenerateFakeForProcedure(procedure, userDefinedTypes, settings, dataLookup));
+            }
+            // TODO: queryClasses.Add(GenerateTransactionManagedProcedure(procedure, userDefinedTypes, settings, dataLookup));
+
+        });
+        _fileManager.WriteFiles(outputDirectory, procedureClasses);
+        
+        // if (settings.QueryList.Any())
+        // {
+        //     CurrentActivity = $"{settings.RepositoryName}: Loading query information {0} of {settings.QueryList.Count}";
+        //     var scriptParsing = new ScriptParsing();
+        //     var tasks = new List<Task>();
+        //     foreach (var querySetting in settings.QueryList)
+        //     {
+        //         tasks.Add(Task.Run(() =>
+        //         {
+        //             var errors = scriptParsing.FindErrorsInQuery(querySetting.Query);
+        //             if (errors.Any())
+        //             {
+        //                 Errors.AddRange(errors.Select(e => querySetting.Name + ": " + e));
+        //             }
+        //             var details = scriptParsing.FindStructureInQuery(querySetting.Query);
+        //             // var query = dataLookup.GetQuery(querySetting, details);
+        //             // var parameters = scriptParsing.GetParameters(details);
+        //             var results = dataLookup.GetResultDefinitionsForQuery(settings.SchemaName, details, parameters, allowProcedureExecution: true);
+        //             querySetting.Return = results.Any() ? ReturnType.List : ReturnType.None;
+        //             if (Char.IsDigit(querySetting.Query[0]))
+        //             {
+        //                 querySetting.Name = "N" + querySetting.Query.Replace(" ", "_");
+        //             }
+        //         }));
+        //     }
+        //
+        //     Task.WaitAll(tasks.ToArray());
+        // }
 
          
         var filesToKeep = procedureClasses.Select(x => x.RelativeFilePath)
             .Concat(userDefinedTypeClasses.Select(x => x.RelativeFilePath))
             .Concat(repoClass.Select(x => x.RelativeFilePath))
             .Concat(fakeRepoClasses.Select(x => x.RelativeFilePath))
+            .Concat(queryClasses.Select(x => x.RelativeFilePath))
             .ToHashSet();
         
         var deletedFiles = _fileManager.DeleteFiles(outputDirectory, filesToKeep);
@@ -367,8 +393,61 @@ public class Generator
 
         return result;
     }
+    
+        
+    private (string RelativeFilePath, string FileContent) GenerateQueryClass(QuerySetting querySetting, List<ResultSetDef> resultSetDefs, List<UserDefinedTableRowDefinition> userDefinedTypes,
+        Settings settings,
+        IDataLookup lookup)
+    {
+        var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();
+        // var parameters = lookup.GetParametersForProcedure(settings.SchemaName, querySetting.Proc);
+        List<ParameterDefinition> parameters = lookup.GetParametersForStructure(resultSetDefs);
+        var resultColumns = lookup.GetResultDefinitionsForStructure(resultSetDefs);
+        var resultMetaData = GetResultMetaData(querySetting, resultColumns, parameters);
+        
+        // Only check for errors if there aren't return columns. Sometimes you can get an error without it being a show-stopping error
+        if (!resultColumns.Any() && resultMetaData.ReturnType != ReturnType.None && resultMetaData.ReturnType != ReturnType.Output)
+        {
+            var resultError = lookup.GetResultDefinitionsErrorsForProcedures(settings.SchemaName, querySetting.GetName());
+            if (resultError != null)
+            {
+                // Errors returned from SQL for return type. This will intentionally be skipped if we say we don't want return columns
+                Errors.Add(querySetting.Proc + ": " + resultError);
+            }
+        }
 
-    private (string RelativeFilePath, string FileContent) GenerateProcedure(ProcedureSetting procedureSetting, List<UserDefinedTableRowDefinition> userDefinedTypes, Settings settings,
+        var methodReturnType = resultMetaData.ReturnType != ReturnType.None ? $@"Task<{resultMetaData.ReturnTypeCSharpString}>" : "Task";
+
+        var sb = new StringBuilder();
+
+        var parameterDefinition = GenerateParameterDefinition(parameters, querySetting, userDefinedTypeNames);
+        if (parameterDefinition != null)
+        {
+            sb.AppendLine(parameterDefinition);
+        }
+
+
+        if (resultMetaData.ReturnType != ReturnType.None)
+        {
+            sb.AppendLine(GenerateResultSetClass(querySetting, resultMetaData, userDefinedTypeNames, parameters));
+        }
+
+        sb.AppendLine(GenerateInterface(querySetting.GetName(), parameters, settings.RepositoryName!, methodReturnType, userDefinedTypeNames));
+
+        sb.AppendLine(
+            $@"
+            public partial class {settings.RepositoryName} : I{settings.RepositoryName}
+            {{
+                {AddProcedureCallingMethod(querySetting, parameters, userDefinedTypeNames, methodReturnType, settings, userDefinedTypes, resultMetaData)}
+                {AddShorthandMethod(querySetting.GetName(), parameters, userDefinedTypeNames, methodReturnType, resultMetaData)}
+            }}
+        ");
+        
+        return ($"{querySetting.GetName()}.generated.cs",
+                WrapInNamespace(sb.ToString(), settings.Namespace, false)
+        );
+    }
+    private (string RelativeFilePath, string FileContent) GenerateProcedureClass(ProcedureSetting procedureSetting, List<UserDefinedTableRowDefinition> userDefinedTypes, Settings settings,
         IDataLookup lookup)
     {
         var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();

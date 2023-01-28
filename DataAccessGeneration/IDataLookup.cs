@@ -7,4 +7,5 @@ public interface IDataLookup
     List<ResultDefinition> GetResultDefinitionsForProcedures(string schemaName, string procedureName,  List<ParameterDefinition> parameters, bool allowProcedureExecution);
     List<UserDefinedTableRowDefinition> GetUserDefinedTypes(string schemaName);
     string? GetResultDefinitionsErrorsForProcedures(string schemaName, string procedureName);
+    List<ParameterDefinition> GetParametersForStructure(List<ResultSetDef> resultSetDefs);
 }

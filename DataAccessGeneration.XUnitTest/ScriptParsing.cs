@@ -31,4 +31,6 @@ WHERE s.name = @schemaName";
         Assert.Equal("s", firstResultSet.VariableDefinitions.Single().MatchingTableAlias);
     }
     
+    
+    
 }

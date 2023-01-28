@@ -380,5 +380,5 @@ public class ScriptParsing
         // return tokens.Select(x => x.TokenType.ToString().PadRight(30) + x.Text).ToList();
         return visitor.ResultSets;
     }
-    
+
 }
