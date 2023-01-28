@@ -30,11 +30,10 @@ public class Generator
         }
         else
         {
-            int loadStarted = 0;
+            int loadCompleted = 0;
             Parallel.ForEach(procedures, _parallelOptions, (procedure, state, index) =>
             {
-                loadStarted++;
-                CurrentActivity = $"{settings.RepositoryName}: Loading procedure information {loadStarted} of {procedures.Count}";
+                CurrentActivity = $"{settings.RepositoryName}: Loading procedure information {loadCompleted} of {procedures.Count}";
                 var parameters = dataLookup.GetParametersForProcedure(settings.SchemaName, procedure.Proc);
                 var results = dataLookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedure.Proc, parameters, allowProcedureExecution: true);
                 procedure.Return = results.Any() ? ReturnType.List : ReturnType.None;
@@ -42,6 +41,7 @@ public class Generator
                 {
                     procedure.Name = "N" + procedure.Proc.Replace(" ", "_");
                 }
+                loadCompleted++;
             });
         }
 
@@ -79,6 +79,36 @@ public class Generator
 
         });
         _fileManager.WriteFiles(outputDirectory, procedureClasses);
+        
+        if (settings.QueryList.Any())
+        {
+            CurrentActivity = $"{settings.RepositoryName}: Loading query information {0} of {settings.QueryList.Count}";
+            var scriptParsing = new ScriptParsing();
+            var tasks = new List<Task>();
+            foreach (var querySetting in settings.QueryList)
+            {
+                tasks.Add(Task.Run(() =>
+                {
+                    var errors = scriptParsing.FindErrorsInQuery(querySetting.Query);
+                    if (errors.Any())
+                    {
+                        Errors.AddRange(errors.Select(e => querySetting.Name + ": " + e));
+                    }
+                    var details = scriptParsing.FindStructureInQuery(querySetting.Query);
+                    var query = dataLookup.GetQuery(querySetting.Query);
+                    var parameters = scriptParsing.GetParameters(query);
+                    var results = dataLookup.GetResultDefinitionsForQuery(settings.SchemaName, querySetting.Query, parameters, allowProcedureExecution: true);
+                    querySetting.Return = results.Any() ? ReturnType.List : ReturnType.None;
+                    if (Char.IsDigit(querySetting.Query[0]))
+                    {
+                        querySetting.Name = "N" + querySetting.Query.Replace(" ", "_");
+                    }
+                }));
+            }
+
+            Task.WaitAll(tasks.ToArray());
+        }
+
          
         var filesToKeep = procedureClasses.Select(x => x.RelativeFilePath)
             .Concat(userDefinedTypeClasses.Select(x => x.RelativeFilePath))

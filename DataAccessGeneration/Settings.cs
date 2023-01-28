@@ -8,6 +8,7 @@
         public string OutputRelativePath { get; set; } = "";
         // If there are any items in the procedure list, load only those
         public List<ProcedureSetting> ProcedureList { get; set; } = new List<ProcedureSetting>();
+        public List<QuerySetting> QueryList { get; set; } = new List<QuerySetting>();
         public bool IncludeFakes { get; set; } = true;
         public string? RepositoryName { get; set; } = null;
         

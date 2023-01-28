@@ -354,7 +354,7 @@ public class ScriptParsing
         
         return errors.Select(x => x.Message).ToList();
     }
-    public List<ResultSetDef> FindParametersInQuery(string query)
+    public List<ResultSetDef> FindStructureInQuery(string query)
     {
         
         // using scriptdom, find all parameters in the query

@@ -16,9 +16,7 @@ WHERE s.name = @schemaName";
         var result = parser.FindErrorsInQuery(query);
         Assert.Empty(result);
 
-        var parameters = parser.FindParametersInQuery(query);
-        // Assert.Empty(parameters);
-        // Assert.Equal("schemaName", parameters[0]);
+        var parameters = parser.FindStructureInQuery(query);
         var firstResultSet = parameters.Single();
         Assert.Equal("@schemaName", firstResultSet.VariableDefinitions.Single().Name);
         
@@ -31,9 +29,6 @@ WHERE s.name = @schemaName";
         Assert.Equal("name", firstResultSet.VariableDefinitions.Single().MatchingColumn);
         
         Assert.Equal("s", firstResultSet.VariableDefinitions.Single().MatchingTableAlias);
-        // Assert.Equal("varchar(999)", firstResultSet.VariableDefinitions.Single().Type);
-
-
-
     }
+    
 }
