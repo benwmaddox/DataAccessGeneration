@@ -412,7 +412,7 @@ public class Generator
             if (resultError != null)
             {
                 // Errors returned from SQL for return type. This will intentionally be skipped if we say we don't want return columns
-                Errors.Add(querySetting.Proc + ": " + resultError);
+                Errors.Add(querySetting.GetName() + ": " + resultError);
             }
         }
 
@@ -447,6 +447,12 @@ public class Generator
                 WrapInNamespace(sb.ToString(), settings.Namespace, false)
         );
     }
+
+    private ResultMetaData GetResultMetaData(QuerySetting querySetting, List<ResultDefinition> resultColumns, List<ParameterDefinition> parameters)
+    {
+        throw new NotImplementedException();
+    }
+
     private (string RelativeFilePath, string FileContent) GenerateProcedureClass(ProcedureSetting procedureSetting, List<UserDefinedTableRowDefinition> userDefinedTypes, Settings settings,
         IDataLookup lookup)
     {
@@ -542,7 +548,7 @@ public class Generator
     }
 
     
-    private static string? GenerateResultSetClass(ProcedureSetting procedureSetting, ResultMetaData resultMetaData, List<string> userDefinedTypeNames, List<ParameterDefinition> parameters)
+    private static string? GenerateResultSetClass(ISettingItem procedureSetting, ResultMetaData resultMetaData, List<string> userDefinedTypeNames, List<ParameterDefinition> parameters)
     {
         switch (resultMetaData.ReturnType) {
             case ReturnType.List:
@@ -703,7 +709,7 @@ public class Generator
     }
 
 
-    public static string? GenerateParameterDefinition(List<ParameterDefinition> parameters, ProcedureSetting procedureSetting, List<string> userDefinedTypeNames)
+    public static string? GenerateParameterDefinition(List<ParameterDefinition> parameters, ISettingItem procedureSetting, List<string> userDefinedTypeNames)
     {
         var cSharpProperties = string.Join("", parameters.Select(p =>
             CalculateParameterSummary(p)
@@ -753,17 +759,17 @@ public class Generator
         return "";
     }
 
-    private static string AddProcedureCallingMethod( ProcedureSetting procedureSetting, List<ParameterDefinition> parameters, List<string> userDefinedTypeNames, string methodReturnType, Settings settings, List<UserDefinedTableRowDefinition> userDefinedTypes, ResultMetaData resultMetaData, bool includeConnectionCreation = true)
+    private static string AddProcedureCallingMethod( ISettingItem settingItem, List<ParameterDefinition> parameters, List<string> userDefinedTypeNames, string methodReturnType, Settings settings, List<UserDefinedTableRowDefinition> userDefinedTypes, ResultMetaData resultMetaData, bool includeConnectionCreation = true)
     {
         StringBuilder sb = new StringBuilder();
         if (parameters.Any())
         {
-            sb.AppendLine($@"public async {methodReturnType} {procedureSetting.GetName()}({procedureSetting.GetName()}_Parameters parameters)
+            sb.AppendLine($@"public async {methodReturnType} {settingItem.GetName()}({settingItem.GetName()}_Parameters parameters)
                 {{");
         }
         else
         {
-            sb.AppendLine($@"public async {methodReturnType} {procedureSetting.GetName()}()
+            sb.AppendLine($@"public async {methodReturnType} {settingItem.GetName()}()
                 {{");
         }
 
@@ -771,7 +777,7 @@ public class Generator
             
             if (resultMetaData.ReturnType != ReturnType.None)
             {
-                sb.AppendLine($@"var results = new List<{procedureSetting.GetName()}_ResultSet>();");
+                sb.AppendLine($@"var results = new List<{settingItem.GetName()}_ResultSet>();");
             }
 
             if (includeConnectionCreation)
@@ -781,7 +787,20 @@ public class Generator
             }
             // If not creating connection ourselves, assuming this includes the transaction and as such it needs to be added to the sql command
             var transactionAddition = includeConnectionCreation ? "" : ", Transaction = transaction";
-            sb.AppendLine($@"SqlCommand cm = new SqlCommand(""[{settings.SchemaName}].[{procedureSetting.Proc}]"", connection){{CommandType = CommandType.StoredProcedure{transactionAddition}}};");
+            
+            if (settingItem is ProcedureSetting procedureSetting)
+            {
+                sb.AppendLine($@"SqlCommand cm = new SqlCommand(""[{settings.SchemaName}].[{procedureSetting.Proc}]"", connection){{CommandType = CommandType.StoredProcedure{transactionAddition}}};");
+            }
+            else if (settingItem is QuerySetting querySetting)
+            {
+                sb.AppendLine($@"SqlCommand cm = new SqlCommand(""{querySetting.Query}"", connection){{CommandType = CommandType.Text{transactionAddition}}};");
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+
             {
                 foreach (var p in parameters)
                 {
@@ -839,7 +858,7 @@ public class Generator
                 }
                 sb.AppendLine($@"if (connection.State != ConnectionState.Open) await connection.OpenAsync();");
                 
-                AppendResultAssignment(sb, procedureSetting, parameters, resultMetaData);
+                AppendResultAssignment(sb, settingItem, parameters, resultMetaData);
                 
                 // sb.AppendLine($@"await connection.CloseAsync();");
             }
@@ -875,7 +894,7 @@ public class Generator
         return sb.ToString();
     }
 
-    private static void AppendResultAssignment(StringBuilder sb, ProcedureSetting procedureSetting, List<ParameterDefinition> parameters, ResultMetaData resultMeta)
+    private static void AppendResultAssignment(StringBuilder sb, ISettingItem settingItem, List<ParameterDefinition> parameters, ResultMetaData resultMeta)
     {
         if (resultMeta.ReturnType != ReturnType.None)
         {
@@ -885,7 +904,7 @@ public class Generator
                 if (resultMeta.ReturnType == ReturnType.Output)
                 {
                     
-                    sb.AppendLine($@"results.Add(new {procedureSetting.GetName()}_ResultSet()
+                    sb.AppendLine($@"results.Add(new {settingItem.GetName()}_ResultSet()
 										{{");
 
                     foreach (var resultColumn in resultMeta.Properties)
@@ -907,7 +926,7 @@ public class Generator
                     sb.AppendLine($@"while (await sdr.ReadAsync())
                     {{");
                     {
-                        sb.AppendLine($@"results.Add(new {procedureSetting.GetName()}_ResultSet()
+                        sb.AppendLine($@"results.Add(new {settingItem.GetName()}_ResultSet()
 										{{");
 
                         foreach (var resultColumn in resultMeta.Properties)

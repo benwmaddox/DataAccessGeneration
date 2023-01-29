@@ -5,7 +5,7 @@ namespace DataAccessGeneration;
 
 public interface ISettingItem
 {
-    
+    string GetName();
 }
 public class QuerySetting : ISettingItem
 {

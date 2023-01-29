@@ -239,6 +239,10 @@ FROM sys.dm_exec_describe_first_result_set('{schemaName}.{procedureName}', NULL,
 		return results.FirstOrDefault(x => x != null);
 	}
 
+	public List<ParameterDefinition> GetParametersForStructure(List<ResultSetDef> resultSetDefs) => throw new NotImplementedException();
+
+	public List<ResultDefinition> GetResultDefinitionsForStructure(List<ResultSetDef> resultSetDefs) => throw new NotImplementedException();
+
 	public List<UserDefinedTableRowDefinition> GetUserDefinedTypes(string schemaName)
 	{
 		var results = new List<UserDefinedTableRowDefinition>();
