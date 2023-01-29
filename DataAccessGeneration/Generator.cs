@@ -327,7 +327,7 @@ public class Generator
                 }}";
     }
 
-    private  ResultMetaData GetResultMetaData(ProcedureSetting procedureSetting, List<ResultDefinition> resultColumns, List<ParameterDefinition> parameters)
+    private  ResultMetaData GetResultMetaData(ISettingItem procedureSetting, List<ResultDefinition> resultColumns, List<ParameterDefinition> parameters)
     {
         var methodReturnType = GetReturnType(procedureSetting, resultColumns, parameters);
         var properties = new List<ResultPropertyMetaData>();
@@ -387,7 +387,7 @@ public class Generator
 
         if (result.ReturnType != ReturnType.None && !result.Properties.Any())
         {
-            var error = $"{procedureSetting.Proc} has no return columns. Please change the Return setting from {result.ReturnType} to the appropriate type or update the procedure. It might need to be set to None if there should not be results.";
+            var error = $"{procedureSetting.GetName()} has no return columns. Please change the Return setting from {result.ReturnType} to the appropriate type or update the procedure. It might need to be set to None if there should not be results.";
             Errors.Add(error);
         }
 
@@ -448,10 +448,11 @@ public class Generator
         );
     }
 
-    private ResultMetaData GetResultMetaData(QuerySetting querySetting, List<ResultDefinition> resultColumns, List<ParameterDefinition> parameters)
-    {
-        throw new NotImplementedException();
-    }
+    // private ResultMetaData GetResultMetaData(QuerySetting querySetting, List<ResultDefinition> resultColumns, List<ParameterDefinition> parameters)
+    // {
+    //     
+    //     throw new NotImplementedException();
+    // }
 
     private (string RelativeFilePath, string FileContent) GenerateProcedureClass(ProcedureSetting procedureSetting, List<UserDefinedTableRowDefinition> userDefinedTypes, Settings settings,
         IDataLookup lookup)
@@ -610,15 +611,15 @@ public class Generator
     */
 
 
-    public string? GetReturnType(ProcedureSetting procedureSetting, List<ResultDefinition> resultColumns, List<ParameterDefinition> parameters)
+    public string? GetReturnType(ISettingItem settingItem, List<ResultDefinition> resultColumns, List<ParameterDefinition> parameters)
     {
-        switch(procedureSetting.Return)
+        switch(settingItem.Return)
         {
             case ReturnType.List:
             case null:
                 if (resultColumns.Any())
                 {
-                    return $"List<{procedureSetting.GetName()}_ResultSet>";
+                    return $"List<{settingItem.GetName()}_ResultSet>";
                 }
                 else
                 {
@@ -626,9 +627,9 @@ public class Generator
                 }
             
             case ReturnType.Single:
-                return $"{procedureSetting.GetName()}_ResultSet";
+                return $"{settingItem.GetName()}_ResultSet";
             case ReturnType.SingleOrDefault:
-                return $"{procedureSetting.GetName()}_ResultSet?";
+                return $"{settingItem.GetName()}_ResultSet?";
             case ReturnType.Scalar:
                 if (resultColumns.Count == 1)
                 {
@@ -636,25 +637,25 @@ public class Generator
                 }
                 else
                 {
-                    var error =$"Scalar return type is only valid for procedures with a single return column. Failure on {procedureSetting.Proc}. Found the following columns: {string.Join(", ", resultColumns.Select(x => x.Name))}";
+                    var error =$"Scalar return type is only valid for procedures with a single return column. Failure on {settingItem.GetName()}. Found the following columns: {string.Join(", ", resultColumns.Select(x => x.Name))}";
                     Errors.Add(error);
                     return null;
                 }
             case ReturnType.Output:
                 if (parameters.Any(x => x.IsOutput))
                 {
-                    return $"{procedureSetting.GetName()}_ResultSet";
+                    return $"{settingItem.GetName()}_ResultSet";
                 }
                 else
                 {
-                    var error = $"Output return type is only valid for procedures with output parameters. Failure on {procedureSetting.Proc}. No output parameters found.";
+                    var error = $"Output return type is only valid for procedures with output parameters. Failure on {settingItem.GetName()}. No output parameters found.";
                     Errors.Add(error);
                     return null;
                 }
             case ReturnType.None:
                 return null;
             default:
-                throw new ArgumentOutOfRangeException(nameof(procedureSetting.Return), procedureSetting.Return, null);
+                throw new ArgumentOutOfRangeException(nameof(settingItem.Return), settingItem.Return, null);
         }
     }
     
@@ -798,7 +799,7 @@ public class Generator
             }
             else
             {
-                throw new NotImplementedException();
+                throw new ArgumentException("Must be either a procedure or query setting");
             }
 
             {

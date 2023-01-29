@@ -153,30 +153,13 @@ FROM sys.dm_exec_describe_first_result_set('{schemaName}.{procedureName}', NULL,
                 }
             },
             GetResultDefinitionsErrorsForProceduresData = null,
-            GetParametersForProcedureData = new List<ParameterDefinition>()
+            GetParametersForStructureData = new List<ParameterDefinition>()
             {
-                new ParameterDefinition()
-                {
-                    Name = "ID",
-                    TypeName = "int",
-                    Precision = 0,
-                    Scale = 4,
-                    MaxLength = 4,
-                    IsOutput = true,
-                    TypeSchema = "sys",
-                    DefaultValue = null
-                },
-                new ParameterDefinition()
-                {
-                    Name = "Name",
-                    TypeName = "varchar",
-                    Precision = 0,
-                    Scale = 50,
-                    MaxLength = 50,
-                    IsOutput = false,
-                    TypeSchema = "sys",
-                    DefaultValue = null
-                }
+                
+            },
+            GetResultDefinitionsForStructureData = new List<ResultDefinition>()
+            {
+                
             },
             GetUserDefinedTypesData = new List<UserDefinedTableRowDefinition>()
             {

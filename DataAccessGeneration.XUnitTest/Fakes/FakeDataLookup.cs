@@ -18,7 +18,10 @@ public class FakeDataLookup : IDataLookup
 
     public string? GetResultDefinitionsErrorsForProceduresData { get; set; } = null;
     public string? GetResultDefinitionsErrorsForProcedures(string schemaName, string procedureName) => GetResultDefinitionsErrorsForProceduresData;
-    public List<ParameterDefinition> GetParametersForStructure(List<ResultSetDef> resultSetDefs) => throw new System.NotImplementedException();
+    
+    public List<ParameterDefinition> GetParametersForStructureData { get; set; } = new List<ParameterDefinition>();
+    public List<ParameterDefinition> GetParametersForStructure(List<ResultSetDef> resultSetDefs) => GetParametersForStructureData;
 
-    public List<ResultDefinition> GetResultDefinitionsForStructure(List<ResultSetDef> resultSetDefs) => throw new System.NotImplementedException();
+    public List<ResultDefinition> GetResultDefinitionsForStructureData { get; set; } = new List<ResultDefinition>();
+    public List<ResultDefinition> GetResultDefinitionsForStructure(List<ResultSetDef> resultSetDefs) => GetResultDefinitionsForStructureData;
 }

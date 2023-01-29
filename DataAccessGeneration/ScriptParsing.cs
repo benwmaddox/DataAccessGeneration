@@ -48,7 +48,7 @@ public class Visitor : TSqlFragmentVisitor
                 QualifiedJoin qualifiedJoin => new string?[]{ (qualifiedJoin.FirstTableReference as NamedTableReference)?.SchemaObject.BaseIdentifier.Value, (qualifiedJoin.SecondTableReference as NamedTableReference)?.SchemaObject.BaseIdentifier.Value},
                 // TableSample tableSample => throw new NotImplementedException(),
                 UnqualifiedJoin unqualifiedJoin => throw new NotImplementedException(),
-                _ => throw new ArgumentOutOfRangeException(nameof(fromClauseItem))
+                _ => throw new ArgumentOutOfRangeException(nameof(fromClauseItem) + " " + fromClauseItem.GetType())
             });
         }
         
@@ -118,11 +118,18 @@ public class Visitor : TSqlFragmentVisitor
             BooleanComparisonExpression booleanComparisonExpression => new List<VariableDef>()
             {
                 MergeVariableDef(ToVariableDef(booleanComparisonExpression.FirstExpression), ToVariableDef(booleanComparisonExpression.SecondExpression))
-                
             },
             BooleanExpressionSnippet booleanExpressionSnippet => throw new NotImplementedException(),
             BooleanIsNullExpression booleanIsNullExpression => throw new NotImplementedException(),
-            BooleanNotExpression booleanNotExpression => throw new NotImplementedException(),
+            BooleanNotExpression booleanNotExpression =>
+        
+            booleanNotExpression switch  
+        {
+            
+            _ => throw new ArgumentOutOfRangeException()
+        },
+        
+
             BooleanParenthesisExpression booleanParenthesisExpression => throw new NotImplementedException(),
             BooleanTernaryExpression booleanTernaryExpression => throw new NotImplementedException(),
             DistinctPredicate distinctPredicate => throw new NotImplementedException(),
@@ -250,14 +257,13 @@ public class Visitor : TSqlFragmentVisitor
             InlineDerivedTable inlineDerivedTable => throw new NotImplementedException(),
             InternalOpenRowset internalOpenRowset => throw new NotImplementedException(),
             AdHocTableReference adHocTableReference => throw new NotImplementedException(),
-            QualifiedJoin qualifiedJoin1 => new List<TableDef>
-            {
-                ToTableDef(qualifiedJoin1.FirstTableReference),
-                ToTableDef(qualifiedJoin1.SecondTableReference)
-            },
+            QualifiedJoin qualifiedJoin1 =>
+                ToTableDef(qualifiedJoin1.FirstTableReference)
+                    .Union(ToTableDef(qualifiedJoin1.SecondTableReference))
+                    .ToList(),
             UnqualifiedJoin unqualifiedJoin => throw new NotImplementedException(),
             JoinTableReference joinTableReference => throw new NotImplementedException(),
-            NamedTableReference namedTableReference1 => throw new NotImplementedException(),
+            NamedTableReference namedTableReference1 => ToTableDef(namedTableReference1).ToList(),
             OdbcQualifiedJoinTableReference odbcQualifiedJoinTableReference => throw new NotImplementedException(),
             OpenJsonTableReference openJsonTableReference => throw new NotImplementedException(),
             OpenQueryTableReference openQueryTableReference => throw new NotImplementedException(),
@@ -278,20 +284,24 @@ public class Visitor : TSqlFragmentVisitor
         }).ToList();
     }
 
-    private TableDef ToTableDef(TableReference table)
+    private IEnumerable<TableDef> ToTableDef(TableReference table)
     {
         return table switch
         {
-            NamedTableReference namedTableReference => new TableDef
+            NamedTableReference namedTableReference => new []{ new TableDef
             {
                 Alias = namedTableReference.Alias?.Value,
                 Schema = namedTableReference.SchemaObject.SchemaIdentifier.Value,
                 Table = namedTableReference.SchemaObject.BaseIdentifier.Value
-            },
-            TableReferenceWithAlias tableReferenceWithAlias => new TableDef
+            }},
+            TableReferenceWithAlias tableReferenceWithAlias => new []{ new TableDef
             {
                 Alias = tableReferenceWithAlias.Alias?.Value
-            },
+            }},
+            QualifiedJoin qualifiedJoin => new []{ new TableDef
+            {
+                
+            }},
             _ => throw new ArgumentOutOfRangeException(nameof(table) + " " + table.GetType())
         };
         

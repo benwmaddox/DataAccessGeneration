@@ -6,6 +6,7 @@ namespace DataAccessGeneration;
 public interface ISettingItem
 {
     string GetName();
+    public ReturnType? Return { get; set; }
 }
 public class QuerySetting : ISettingItem
 {
