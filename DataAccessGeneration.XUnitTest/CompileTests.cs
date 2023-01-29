@@ -139,7 +139,7 @@ FROM sys.dm_exec_describe_first_result_set('{schemaName}.{procedureName}', NULL,
         };
         var dataLookup = new FakeDataLookup()
         {
-            GetProceduresForSchemaData = new List<string>(){ "uspExampleProc"},
+            GetProceduresForSchemaData = new List<string>(){ },
             GetResultDefinitionsForProcedureData = new List<ResultDefinition>()
             {
                 new ResultDefinition()
@@ -168,6 +168,7 @@ FROM sys.dm_exec_describe_first_result_set('{schemaName}.{procedureName}', NULL,
         };
         generator.Generate(settings, dataLookup,  Path.GetTempPath());
 
+        Assert.NotEmpty(fileManager.SavedFiles);
         AssertCompilesWithoutError(fileManager);
         
     }

@@ -12,7 +12,7 @@ public class FakeFileManager : IFileManager
         foreach (var file in files)
         {
             var path = Path.Combine(rootOutputDirectory, file.RelativeFilePath);
-            SavedFiles[path] = file.FileContent;
+            SavedFiles[path] = file.FileContent.IndentBasedOnBraces().StandardizeExtraNewlines();
         }
     }
 

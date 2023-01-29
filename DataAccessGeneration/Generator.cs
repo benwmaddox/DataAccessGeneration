@@ -103,7 +103,7 @@ public class Generator
             // TODO: queryClasses.Add(GenerateTransactionManagedProcedure(procedure, userDefinedTypes, settings, dataLookup));
 
         });
-        _fileManager.WriteFiles(outputDirectory, procedureClasses);
+        _fileManager.WriteFiles(outputDirectory, queryClasses);
         
         // if (settings.QueryList.Any())
         // {
@@ -795,7 +795,7 @@ public class Generator
             }
             else if (settingItem is QuerySetting querySetting)
             {
-                sb.AppendLine($@"SqlCommand cm = new SqlCommand(""{querySetting.Query}"", connection){{CommandType = CommandType.Text{transactionAddition}}};");
+                sb.AppendLine($@"SqlCommand cm = new SqlCommand(@""{querySetting.Query}"", connection){{CommandType = CommandType.Text{transactionAddition}}};");
             }
             else
             {

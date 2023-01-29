@@ -120,7 +120,10 @@ public class Visitor : TSqlFragmentVisitor
                 MergeVariableDef(ToVariableDef(booleanComparisonExpression.FirstExpression), ToVariableDef(booleanComparisonExpression.SecondExpression))
             },
             BooleanExpressionSnippet booleanExpressionSnippet => throw new NotImplementedException(),
-            BooleanIsNullExpression booleanIsNullExpression => throw new NotImplementedException(),
+            BooleanIsNullExpression booleanIsNullExpression =>new List<VariableDef>()
+            {
+                MergeVariableDef(ToVariableDef(booleanIsNullExpression.Expression))
+            },
             BooleanNotExpression booleanNotExpression =>
         
             booleanNotExpression switch  
@@ -187,7 +190,7 @@ public class Visitor : TSqlFragmentVisitor
             ConvertCall convertCall => throw new NotImplementedException(),
             DefaultLiteral defaultLiteral => throw new NotImplementedException(),
             ExtractFromExpression extractFromExpression => throw new NotImplementedException(),
-            FunctionCall functionCall => throw new NotImplementedException(),
+            FunctionCall functionCall => new VariableDef(null, null, null, null),
             GlobalVariableExpression globalVariableExpression => throw new NotImplementedException(),
             IdentifierLiteral identifierLiteral => throw new NotImplementedException(),
             IdentityFunctionCall identityFunctionCall => throw new NotImplementedException(),
