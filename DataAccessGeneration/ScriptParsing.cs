@@ -292,7 +292,7 @@ public class Visitor : TSqlFragmentVisitor
             {
                 Alias = tableReferenceWithAlias.Alias?.Value
             },
-            _ => throw new ArgumentOutOfRangeException(nameof(table))
+            _ => throw new ArgumentOutOfRangeException(nameof(table) + " " + table.GetType())
         };
         
     }
