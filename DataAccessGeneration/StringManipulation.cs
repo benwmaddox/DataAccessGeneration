@@ -71,5 +71,8 @@ public static class StringManipulation
         }
         return result.ToString();
     }
-		
+    public static string JoinWithCommaAndNewLines(this IEnumerable<string> items)
+    {
+        return string.Join("," + Environment.NewLine, items);
+    }		
 }
