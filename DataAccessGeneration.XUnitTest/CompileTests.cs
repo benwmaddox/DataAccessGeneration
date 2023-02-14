@@ -105,7 +105,7 @@ public class CompileTests
     {
         var metadataReferences = GetGlobalReferences();
         var compilation = CSharpCompilation.Create("TestAssembly",
-            fileManager.SavedFiles.Select(file => CSharpSyntaxTree.ParseText(file.Value, path: file.Key) ),
+            fileManager.SavedFiles.Select(file => CSharpSyntaxTree.ParseText(file.Value.IndentBasedOnBraces(), path: file.Key) ),
             metadataReferences,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable)
         );
