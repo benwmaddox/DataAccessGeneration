@@ -7,8 +7,8 @@
     <Nullable>enable</Nullable>
     <PackageReadmeFile>readme.md</PackageReadmeFile>
     <PublishTrimmed>false</PublishTrimmed>
-    <AssemblyVersion>1.18</AssemblyVersion>
-    <FileVersion>1.18</FileVersion>    
+    <AssemblyVersion>1.19</AssemblyVersion>
+    <FileVersion>1.19</FileVersion>    
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
