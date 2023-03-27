@@ -164,6 +164,9 @@ Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
 * Make sure the current user has access to the Northwind database.
 
 ### Changes
+#### 2023-03-27 (V1.19)
+* Memory leak fix around command creation
+
 #### 2023-02-14 (V1.18)
 * Corrected result assignments for output result types when no result set is returned.
 
