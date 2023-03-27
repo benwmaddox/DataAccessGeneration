@@ -688,7 +688,8 @@ public class Generator
 
             // If not creating connection ourselves, assuming this includes the transaction and as such it needs to be added to the sql command
             var transactionAddition = includeConnectionCreation ? "" : ", Transaction = transaction";
-            sb.AppendLine($@"SqlCommand cm = new SqlCommand(""[{settings.SchemaName}].[{procedureSetting.Proc}]"", connection){{CommandType = CommandType.StoredProcedure{transactionAddition}}};");
+            sb.AppendLine($@"using (SqlCommand cm = new SqlCommand(""[{settings.SchemaName}].[{procedureSetting.Proc}]"", connection){{CommandType = CommandType.StoredProcedure{transactionAddition}}})");
+            sb.AppendLine("{");
             {
                 foreach (var p in parameters)
                 {
@@ -757,6 +758,7 @@ public class Generator
             {
                 sb.AppendLine($"}}");
             }
+            sb.AppendLine("}");
 
             switch (resultMetaData.ReturnType)
             {
