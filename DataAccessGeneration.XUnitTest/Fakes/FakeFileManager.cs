@@ -7,7 +7,7 @@ namespace DataAccessGeneration.XUnitTest;
 public class FakeFileManager : IFileManager
 {
     public Dictionary<string, string> SavedFiles = new Dictionary<string, string>();
-    public void WriteFiles(string rootOutputDirectory, List<(string RelativeFilePath, string FileContent)> files)
+    public void WriteFiles(string rootOutputDirectory, List<OutputFile> files)
     {
         foreach (var file in files)
         {

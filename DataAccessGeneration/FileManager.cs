@@ -2,7 +2,7 @@
 
 public class FileManager : IFileManager
 {
-    public void WriteFiles(string rootOutputDirectory, List<(string RelativeFilePath, string FileContent)> files)
+    public void WriteFiles(string rootOutputDirectory, List<OutputFile> files)
     {
         if (!Directory.Exists(rootOutputDirectory))
         {
