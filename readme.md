@@ -166,7 +166,8 @@ Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
 ### Changes
 #### TBD (V1.20)
 * Always including output parameters even if default value is defined.
-* If the first 2 characters are uppercase, don't change the first character to lowercase for parameters
+* If the first 2 characters are uppercase, don't change the first character to lowercase for parameters.
+* Adjusted parameter lookup to fix length of text type.
 
 #### 2023-03-27 (V1.19)
 * Added using statement for command objects to ensure they are disposed.
