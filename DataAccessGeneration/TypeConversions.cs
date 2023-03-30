@@ -131,7 +131,7 @@ namespace DataAccessGeneration
 		public static string CSharpType(this UserDefinedTableRowDefinition r, bool? isNullable = null,  List<string>? userDefinedTypeNames = null) => getCSharpTypeFromSQLType(r.TypeName, r.MaxLength, r.Precision, r.Scale, isNullable ?? r.IsNullable, userDefinedTypeNames);
 		public static string CSharpType(this ResultDefinition r, List<string>? userDefinedTypeNames = null) => getCSharpTypeFromSQLType(r.TypeName, r.MaxLength, r.Precision, r.Scale, r.IsNullable, userDefinedTypeNames);
 
-		public static string getCSharpTypeFromSQLType(string typeName, short? maxLength = null, byte? precision = null, byte? scale = null, bool? isNullable = true, List<string>? userDefinedTypes = null)
+		public static string getCSharpTypeFromSQLType(string typeName, int? maxLength = null, byte? precision = null, byte? scale = null, bool? isNullable = true, List<string>? userDefinedTypes = null)
 		{
 			var cSharpToSqlConversion = new Dictionary<string, string>()
 			{

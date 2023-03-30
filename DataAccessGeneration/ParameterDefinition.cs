@@ -4,7 +4,7 @@
 	{
 		public string Name { get; set; } = "";
 		public string TypeName { get; set; } = "";
-		public short MaxLength { get; set; }
+		public int MaxLength { get; set; }
 		public byte Precision { get; set; }
 		public byte Scale { get; set; }
 		public bool IsOutput { get; set; }

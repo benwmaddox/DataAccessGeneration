@@ -66,12 +66,13 @@ WHERE OBJECT_ID =  OBJECT_ID('{schemaName}.{procedureName}')
 		using (SqlConnection connection = new SqlConnection(_connectionString))
 		{
 			SqlCommand cm = new SqlCommand($@"
-SELECT p.name as ParameterName, ISNULL(t.name, ut.name) as TypeName, ISNULL(ts.name, uts.name) as TypeSchema,  p.max_length, p.precision, p.scale, p.system_type_id, p.is_output
+SELECT p.name as ParameterName, ISNULL(t.name, ut.name) as TypeName, ISNULL(ts.name, uts.name) as TypeSchema, IsNull(isp.character_maximum_length, Cast(p.max_length AS int)) AS max_length,  p.precision, p.scale, p.system_type_id, p.is_output
 FROM sys.parameters p 
 LEFT JOIN sys.types t ON p.system_type_id = t.system_type_id AND t.is_user_defined = 0 AND t.name <> 'sysname'
 LEFT JOIN sys.types ut ON p.user_type_id = ut.user_type_id AND ut.name <> 'AUTO_ID'
 LEFT JOIN sys.schemas ts ON t.schema_id = ts.schema_id
 LEFT JOIN sys.schemas uts ON ut.schema_id = uts.schema_id
+LEFT JOIN INFORMATION_SCHEMA.PARAMETERS isp ON p.name = isp.parameter_name AND isp.SPECIFIC_SCHEMA = '{schemaName}' AND isp.SPECIFIC_NAME = '{procedureName}'
 WHERE p.OBJECT_ID = OBJECT_ID('{schemaName}.{procedureName}')
 AND ISNULL(ut.name, t.name) IS NOT null
 ORDER BY p.parameter_id
@@ -86,7 +87,7 @@ ORDER BY p.parameter_id
 					Name = (string)sdr["ParameterName"],
 					TypeName = (string)sdr["TypeName"],
 					TypeSchema = (string)sdr["TypeSchema"],
-					MaxLength = (short)sdr["max_length"],
+					MaxLength = (int)sdr["max_length"],
 					Precision = (byte)sdr["precision"],
 					Scale = (byte)sdr["scale"],
 					IsOutput = (bool)sdr["is_output"]
