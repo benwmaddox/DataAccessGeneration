@@ -263,7 +263,7 @@ public class Generator
         if (content.Contains("List<")) namespaces.Add("System.Collections.Generic");
         if (content.Contains("CommandType")) namespaces.Add("System.Data.SqlTypes");
         if (content.Contains("Task<") || content.Contains("Task ")) namespaces.Add("System.Threading.Tasks");
-        if (content.Contains(".Single(") || content.Contains(".SingleOrDefault(")) namespaces.Add("System.Linq");
+        if (content.Contains(".Single(") || content.Contains(".SingleOrDefault(") || content.Contains(".Select(")) namespaces.Add("System.Linq");
 
 
         return $@"#nullable enable{string.Join("", namespaces.OrderBy(x => x).Select(x => $"\nusing {x};"))}
@@ -390,6 +390,7 @@ public class Generator
             {{
                 {AddProcedureCallingMethod(procedureSetting, parameters, userDefinedTypeNames, methodReturnType, settings, userDefinedTypes, resultMetaData)}
                 {AddShorthandMethod(procedureSetting.GetName(), parameters, userDefinedTypeNames, methodReturnType, resultMetaData)}
+                {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, userDefinedTypes, methodReturnType, resultMetaData)}
             }}
         ");
 
@@ -433,6 +434,7 @@ public class Generator
             {{
                 {AddProcedureCallingMethod(procedureSetting, parameters, userDefinedTypeNames, methodReturnType, settings, userDefinedTypes, resultMetaData, false)}
                 {AddShorthandMethod(procedureSetting.GetName(), parameters, userDefinedTypeNames, methodReturnType, resultMetaData)}
+                {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, userDefinedTypes, methodReturnType, resultMetaData)}
             }}
         }}");
 
@@ -572,6 +574,7 @@ public class Generator
         {{
             {AddFakeProcedureCallingMethod(procedureSetting, parameters, methodReturnType, settings, resultMetaData)}
             {AddShorthandMethod(procedureSetting.GetName(), parameters, userDefinedTypeNames, methodReturnType, resultMetaData)}
+            {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, userDefinedTypes, methodReturnType, resultMetaData)}
         }}");
 
         return ($"Fake/{procedureSetting.GetName()}.generated.cs",
@@ -634,7 +637,6 @@ public class Generator
 
     private static string AddShorthandMethod(string procName, List<ParameterDefinition> parameters, List<string> userDefinedTypeNames, string methodReturnType, ResultMetaData resultMetaData)
     {
-        StringBuilder sb = new StringBuilder();
         if (parameters.Any() && parameters.Count < 4)
         {
             var parameterList = string.Join(", ", parameters.Select(p => p.CSharpType(userDefinedTypeNames) + " " + p.CSharpPropertyName().ToCamelCase()));
@@ -656,6 +658,32 @@ public class Generator
         }
 
         return "";
+    }
+    private static string AddUDTShorthandMethod(string procName, List<ParameterDefinition> parameters, List<UserDefinedTableRowDefinition> userDefinedTypes, string methodReturnType, ResultMetaData resultMetaData)
+    {
+        StringBuilder sb = new StringBuilder();
+        if (parameters.Count != 1) return "";
+        var typeMatches = userDefinedTypes.Where(x => x.TableTypeName == parameters.Single().TypeName).ToList();
+        if (typeMatches.Count != 1) return "";
+        var typeMatch = typeMatches.Single();
+        
+        var returnLine = resultMetaData.ReturnType != ReturnType.None
+            ? $"return await {procName}(parameters);"
+            : $"await {procName}(parameters);";
+
+        return $@"
+            public async {methodReturnType} {procName}(IEnumerable<{typeMatch.TypeName}> {parameters.Single().CSharpPropertyName().ToCamelCase()})
+            {{
+                var parameters = new {procName}_Parameters()
+	            {{
+                    {parameters.Single().CSharpPropertyName()} = {parameters.Single().CSharpPropertyName().ToCamelCase()}.Select(item => new {typeMatch.TableTypeName}()
+                    {{
+                        {typeMatch.CSharpPropertyName()} = item
+                    }}).ToList()
+	            }};
+                {returnLine}
+            }}
+";
     }
 
     private static string AddProcedureCallingMethod(ProcedureSetting procedureSetting, List<ParameterDefinition> parameters, List<string> userDefinedTypeNames, string methodReturnType,
