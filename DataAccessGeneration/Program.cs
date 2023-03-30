@@ -2,13 +2,12 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CommandLine;
-using CommandLine.Text;
 
 namespace DataAccessGeneration
 {
 	public partial class Program
 	{
-	    public const string VERSION = "TBD V1.20";
+	    public const string VERSION = "2023-03-30 V1.20";
 		public static void Main(string[] args)
 		{
 			var parser = Parser.Default;

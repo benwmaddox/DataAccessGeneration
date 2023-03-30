@@ -383,7 +383,7 @@ public class Generator
             sb.AppendLine(GenerateResultSetClass(procedureSetting, resultMetaData, userDefinedTypeNames, parameters));
         }
 
-        sb.AppendLine(GenerateInterface(procedureSetting.GetName(), parameters, settings.RepositoryName!, methodReturnType, userDefinedTypeNames));
+        sb.AppendLine(GenerateInterface(procedureSetting.GetName(), parameters, settings.RepositoryName!, methodReturnType, userDefinedTypeNames, userDefinedTypes));
 
         sb.AppendLine(
             $@"
@@ -584,7 +584,8 @@ public class Generator
 
     }
 
-    private static string GenerateInterface(string procName, List<ParameterDefinition> parameters, string repoName, string resultType, List<string> userDefinedTypeNames)
+    private static string GenerateInterface(string procName, List<ParameterDefinition> parameters, string repoName, string resultType, List<string> userDefinedTypeNames,
+        List<UserDefinedTableRowDefinition> userDefinedTypes)
     {
         StringBuilder sb = new StringBuilder();
         if (parameters.Any())
@@ -592,11 +593,19 @@ public class Generator
             var shortHandMethod = parameters.Count < 4
                 ? $@"{resultType} {procName}({string.Join(", ", parameters.Select(p => p.CSharpType(userDefinedTypeNames) + " " + p.CSharpPropertyName().ToCamelCase()))});"
                 : "";
+
+            var typeMatches = parameters.Count == 1 ? userDefinedTypes.Where(x => x.TableTypeName == parameters.Single().TypeName).ToList() : new List<UserDefinedTableRowDefinition>();
+            var typeMatch = typeMatches.FirstOrDefault();
+            var udtMethod = typeMatches.Count == 1 && typeMatch != null && parameters.Count == 1
+                ? $"{resultType} {procName}(IEnumerable<{typeMatch.TypeName}> {parameters.Single().CSharpPropertyName().ToCamelCase()});" 
+                : "";
+
             sb.AppendLine($@"
             public partial interface I{repoName}
             {{
                 {resultType} {procName}({procName}_Parameters parameters);
                 {shortHandMethod}
+                {udtMethod}
             }}");
         }
         else
