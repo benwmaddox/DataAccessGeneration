@@ -206,8 +206,8 @@ namespace DataAccessGeneration
 		{
 			if (string.IsNullOrEmpty(input))
 				return input;
-
-			if (input.Length > 1)
+			
+			if (input.Length > 1 && char.IsUpper(input[1]) && !char.IsUpper(input[0]))
 				return char.ToLowerInvariant(input[0]) + input.Substring(1);
 
 			return input.ToLowerInvariant();
