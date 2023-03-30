@@ -617,9 +617,9 @@ public class Generator
         return parameters.Any()
             ? $@"
                 public partial class {procedureSetting.GetName()}_Parameters
-							{{
-                                {cSharpProperties}		
-							}}"
+				{{
+                    {cSharpProperties}		
+				}}"
             : null;
     }
 
@@ -721,7 +721,7 @@ public class Generator
                         var verificationLine = p.ParameterDataVerification();
                         if (!string.IsNullOrWhiteSpace(verificationLine)) sb.AppendLine(verificationLine);
                         // Individual rows
-                        if (p.DefaultValue != null)
+                        if (p.DefaultValue != null && !p.IsOutput)
                         {
                             // A default value in the database means that we only add the SqlParameter if there is a value. 
                             sb.AppendLine($@"if (parameters.{p.CSharpPropertyName()} != null)
@@ -741,7 +741,7 @@ public class Generator
                             }
                             sb.AppendLine($@"}});");
                         }
-                        if (p.DefaultValue != null)
+                        if (p.DefaultValue != null  && !p.IsOutput)
                         {
                             sb.AppendLine($@"}}");
                         }

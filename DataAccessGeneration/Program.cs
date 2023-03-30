@@ -8,7 +8,7 @@ namespace DataAccessGeneration
 {
 	public partial class Program
 	{
-	    public const string VERSION = "2023-03-27 V1.19";
+	    public const string VERSION = "TBD V1.20";
 		public static void Main(string[] args)
 		{
 			var parser = Parser.Default;
