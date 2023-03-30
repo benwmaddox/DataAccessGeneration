@@ -661,7 +661,6 @@ public class Generator
     }
     private static string AddUDTShorthandMethod(string procName, List<ParameterDefinition> parameters, List<UserDefinedTableRowDefinition> userDefinedTypes, string methodReturnType, ResultMetaData resultMetaData)
     {
-        StringBuilder sb = new StringBuilder();
         if (parameters.Count != 1) return "";
         var typeMatches = userDefinedTypes.Where(x => x.TableTypeName == parameters.Single().TypeName).ToList();
         if (typeMatches.Count != 1) return "";
