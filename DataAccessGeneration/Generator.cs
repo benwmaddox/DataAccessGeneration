@@ -57,14 +57,14 @@ public class Generator
         _fileManager.WriteFiles(outputDirectory, userDefinedTypeClasses);
         var repoClass = GenerateRepoClassWithConstructor(settings);
         _fileManager.WriteFiles(outputDirectory, repoClass);
-        List<(string RelativeFilePath, string FileContent)> fakeRepoClasses = new List<(string RelativeFilePath, string FileContent)>();
+        List<OutputFile> fakeRepoClasses = new List<OutputFile>();
         if (settings.IncludeFakes)
         {
             fakeRepoClasses = GenerateFakeRepoClassWithConstructor(settings);
             _fileManager.WriteFiles(outputDirectory, fakeRepoClasses);
         }
 
-        var procedureClasses = new List<(string RelativeFilePath, string FileContent)>();
+        var procedureClasses = new List<OutputFile>();
         int generateStarted = 0;
         Parallel.ForEach(procedures, _parallelOptions, (procedure, state, index) =>
         {
@@ -115,10 +115,11 @@ public class Generator
 
     }
 
-    private static List<(string RelativeFilePath, string FileContent)> GenerateRepoClassWithConstructor(Settings settings)
+    private static List<OutputFile> GenerateRepoClassWithConstructor(Settings settings)
     {
-        return new List<(string RelativeFilePath, string FileContent)>()
+        return new List<OutputFile>()
         {
+            new OutputFile
             (
                 $"{settings.RepositoryName}.generated.cs",
                 WrapInNamespace(
@@ -219,11 +220,11 @@ public class Generator
     }
 
 
-    private static List<(string RelativeFilePath, string FileContent)> GenerateFakeRepoClassWithConstructor(Settings settings)
+    private static List<OutputFile> GenerateFakeRepoClassWithConstructor(Settings settings)
     {
-        return new List<(string RelativeFilePath, string FileContent)>()
+        return new List<OutputFile>()
         {
-            (
+            new OutputFile(
                 $"Fake/Fake{settings.RepositoryName}.generated.cs",
                 WrapInNamespace(
                     $@"public partial class Fake{settings.RepositoryName} : I{settings.RepositoryName} 
@@ -346,7 +347,7 @@ public class Generator
         return result;
     }
 
-    private (string RelativeFilePath, string FileContent) GenerateProcedure(ProcedureSetting procedureSetting, List<UserDefinedTableRowDefinition> userDefinedTypes, Settings settings,
+    private OutputFile GenerateProcedure(ProcedureSetting procedureSetting, List<UserDefinedTableRowDefinition> userDefinedTypes, Settings settings,
         IDataLookup lookup)
     {
         var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();
@@ -394,14 +395,14 @@ public class Generator
             }}
         ");
 
-        return ($"{procedureSetting.GetName()}.generated.cs",
+        return new OutputFile($"{procedureSetting.GetName()}.generated.cs",
                 WrapInNamespace(sb.ToString(), settings.Namespace, false)
             );
     }
 
 
 
-    private (string RelativeFilePath, string FileContent) GenerateTransactionManagedProcedure(ProcedureSetting procedureSetting, List<UserDefinedTableRowDefinition> userDefinedTypes,
+    private OutputFile GenerateTransactionManagedProcedure(ProcedureSetting procedureSetting, List<UserDefinedTableRowDefinition> userDefinedTypes,
         Settings settings,
         IDataLookup lookup)
     {
@@ -438,7 +439,7 @@ public class Generator
             }}
         }}");
 
-        return ($"{procedureSetting.GetName()}.TransactionManaged.generated.cs",
+        return new OutputFile($"{procedureSetting.GetName()}.TransactionManaged.generated.cs",
                 WrapInNamespace(sb.ToString(), settings.Namespace, false)
             );
     }
@@ -556,7 +557,7 @@ public class Generator
         }
     }
 
-    private (string RelativeFilePath, string FileContent) GenerateFakeForProcedure(ProcedureSetting procedureSetting, List<UserDefinedTableRowDefinition> userDefinedTypes, Settings settings,
+    private OutputFile GenerateFakeForProcedure(ProcedureSetting procedureSetting, List<UserDefinedTableRowDefinition> userDefinedTypes, Settings settings,
         IDataLookup lookup)
     {
         var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();
@@ -577,7 +578,7 @@ public class Generator
             {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, userDefinedTypes, methodReturnType, resultMetaData)}
         }}");
 
-        return ($"Fake/{procedureSetting.GetName()}.generated.cs",
+        return new OutputFile($"Fake/{procedureSetting.GetName()}.generated.cs",
                 WrapInNamespace(sb.ToString(), settings.Namespace + ".Fake", false, settings.Namespace)
             );
 
@@ -954,13 +955,13 @@ public class Generator
     }
 
 
-    private static List<(string RelativeFilePath, string FileContent)> GenerateUserDefinedTypeClasses(List<UserDefinedTableRowDefinition> userDefinedTypes, string settingsNamespace)
+    private static List<OutputFile> GenerateUserDefinedTypeClasses(List<UserDefinedTableRowDefinition> userDefinedTypes, string settingsNamespace)
     {
         var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();
         var results = userDefinedTypes
             .GroupBy(x => x.TableTypeName)
             .Select(dt =>
-            (
+            new OutputFile(
                 $"{dt.Key}.generated.cs",
                 WrapInNamespace(
                 $@"public partial class {dt.Key} 
