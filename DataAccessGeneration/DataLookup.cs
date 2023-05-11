@@ -22,6 +22,8 @@ public class DataLookup : IDataLookup
 SELECT p.name FROM sys.procedures p
 JOIN sys.schemas s ON p.schema_id = s.schema_id
 WHERE s.name = '{schemaName}'", connection);
+			
+			cm.CommandTimeout = 120000;
 			// Opening Connection  
 			connection.Open();
 			// Executing the SQL query  
@@ -46,6 +48,8 @@ WHERE s.name = '{schemaName}'", connection);
 SELECT definition FROM sys.sql_modules
 WHERE OBJECT_ID =  OBJECT_ID('{schemaName}.{procedureName}')
 ", connection);
+			
+			cm.CommandTimeout = 120000;
 			// Opening Connection  
 			connection.Open();
 			// Executing the SQL query  
@@ -78,6 +82,7 @@ AND ISNULL(ut.name, t.name) IS NOT null
 ORDER BY p.parameter_id
 ", connection);
 
+			cm.CommandTimeout = 120000;
 			connection.Open();
 			SqlDataReader sdr = cm.ExecuteReader();
 			while (sdr.Read())
@@ -153,7 +158,7 @@ LEFT JOIN sys.types ut ON rs.user_type_id = ut.user_type_id  AND ut.name <> 'AUT
 WHERE rs.name IS NOT null
 ORDER BY rs.column_ordinal
 ", connection);
-
+			cm.CommandTimeout = 120000;
 			connection.Open();
 
 			SqlDataReader sdr = cm.ExecuteReader();
@@ -198,6 +203,7 @@ ORDER BY rs.column_ordinal
 		using (SqlConnection connection = new SqlConnection(_connectionString))
 		{
 			SqlCommand cm = new SqlCommand(procedureCallingCode, connection);
+			cm.CommandTimeout = 120000;
 			connection.Open();
 
 			SqlDataReader sdr = cm.ExecuteReader();
@@ -228,6 +234,7 @@ ORDER BY rs.column_ordinal
 FROM sys.dm_exec_describe_first_result_set('{schemaName}.{procedureName}', NULL, 0) rs
 ", connection);
 
+			cm.CommandTimeout = 120000;
 			connection.Open();
 
 			SqlDataReader sdr = cm.ExecuteReader();
@@ -258,6 +265,7 @@ LEFT JOIN sys.types ut ON c.user_type_id = ut.user_type_id AND ut.name <> 'AUTO_
 WHERE tt.is_user_defined = 1
 ORDER BY s.name, c.column_id
 ", connection);
+			cm.CommandTimeout = 120000;
 			connection.Open();
 
 			SqlDataReader sdr = cm.ExecuteReader();
@@ -291,6 +299,7 @@ WHERE is_user_defined = 0
 AND name <> 'sysname'
 ", connection);
 
+			cm.CommandTimeout = 120000;
 			connection.Open();
 
 			SqlDataReader sdr = cm.ExecuteReader();
