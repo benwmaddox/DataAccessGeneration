@@ -158,12 +158,15 @@ Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
 ```
 
 ### Integration Tests
-* Uses SQL Server 2019 Express Edition for testing purposes.
+* Uses SQL Server 2019 Express Edition for local testing purposes.
 * Install SQL Server 2019 Express Edition
 * Create a database called Northwind and run the Northwind/instnwnd.sql script in the database.
 * Make sure the current user has access to the Northwind database.
 
 ### Changes
+#### 2023-05-11 (V1.21)
+* Included a longer timeout for database calls
+
 #### 2023-03-30 (V1.20)
 * Always including output parameters even if default value is defined.
 * If the first 2 characters are uppercase, don't change the first character to lowercase for parameters.
