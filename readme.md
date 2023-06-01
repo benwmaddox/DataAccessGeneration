@@ -165,7 +165,7 @@ Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
 
 ### Changes
 #### 2023-06-01 (V1.23)
-* Better handling of user defined table types and nullable values
+* Better handling of user defined table types and nullable values 
 
 #### 2023-06-01 (V1.22)
 * Corrected type used in generating interfaces for user defined table type values
