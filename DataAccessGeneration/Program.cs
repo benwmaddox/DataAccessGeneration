@@ -7,7 +7,7 @@ namespace DataAccessGeneration
 {
 	public partial class Program
 	{
-	    public const string VERSION = "2023-05-11 V1.21";
+	    public const string VERSION = "2023-06-01 V1.22";
 		public static void Main(string[] args)
 		{
 			var parser = Parser.Default;
@@ -59,8 +59,7 @@ namespace DataAccessGeneration
 			stopwatch.Stop();
 			timer.Dispose();
 			PrintStatus(generators, stopwatch);
-			Console.WriteLine("Press enter to exit");
-			var value = Console.ReadLine();
+			Console.WriteLine("Exiting");
 		}
 		
 		private static void PrintStatus(List<Generator> generators, Stopwatch stopwatch)

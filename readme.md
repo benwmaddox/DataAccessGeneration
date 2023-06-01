@@ -164,6 +164,10 @@ Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
 * Make sure the current user has access to the Northwind database.
 
 ### Changes
+#### 2023-06-01 (V1.22)
+* Corrected type used in generating interfaces for user defined table type values
+* Exiting by default instead of requiring a key press
+
 #### 2023-05-11 (V1.21)
 * Included a longer timeout for database calls
 
