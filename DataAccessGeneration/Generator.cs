@@ -597,7 +597,7 @@ public class Generator
             var typeMatches = parameters.Count == 1 ? userDefinedTypes.Where(x => x.TableTypeName == parameters.Single().TypeName).ToList() : new List<UserDefinedTableRowDefinition>();
             var typeMatch = typeMatches.FirstOrDefault();
             var udtMethod = typeMatches.Count == 1 && typeMatch != null && parameters.Count == 1
-                ? $"{resultType} {procName}(IEnumerable<{typeMatch.CSharpType()}> {parameters.Single().CSharpPropertyName().ToCamelCase()});" 
+                ? $"{resultType} {procName}(IEnumerable<{typeMatch.CSharpType(isNullable:false)}> {parameters.Single().CSharpPropertyName().ToCamelCase()});" 
                 : "";
 
             sb.AppendLine($@"
@@ -681,7 +681,7 @@ public class Generator
             : $"await {procName}(parameters);";
 
         return $@"
-            public async {methodReturnType} {procName}(IEnumerable<{typeMatch.TypeName}> {parameters.Single().CSharpPropertyName().ToCamelCase()})
+            public async {methodReturnType} {procName}(IEnumerable<{typeMatch.CSharpType(isNullable:false)}> {parameters.Single().CSharpPropertyName().ToCamelCase()})
             {{
                 var parameters = new {procName}_Parameters()
 	            {{

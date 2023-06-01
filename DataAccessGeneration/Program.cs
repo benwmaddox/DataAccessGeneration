@@ -7,7 +7,7 @@ namespace DataAccessGeneration
 {
 	public partial class Program
 	{
-	    public const string VERSION = "2023-06-01 V1.22";
+	    public const string VERSION = "2023-06-01 V1.23";
 		public static void Main(string[] args)
 		{
 			var parser = Parser.Default;
