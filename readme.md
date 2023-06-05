@@ -165,7 +165,7 @@ Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
 
 ### Changes
 #### 2023-06-05 (V1.24)
-* Reduced database calls when return type is None or Output
+* Reduced database calls when return type is None or Output.
 
 #### 2023-06-01 (V1.23)
 * Better handling of user defined table types and nullable values 
