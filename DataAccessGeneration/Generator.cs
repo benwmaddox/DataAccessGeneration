@@ -353,9 +353,10 @@ public class Generator
         var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();
         var parameters = lookup.GetParametersForProcedure(settings.SchemaName, procedureSetting.Proc);
         var resultColumns =
-            procedureSetting.Return  == ReturnType.None || procedureSetting.Return == ReturnType.Output ? new List<ResultDefinition>() :
-            lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
-            allowProcedureExecution: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output);
+            procedureSetting.LookupOutputTypes
+                ? lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
+                    allowProcedureExecution: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output)
+                : new List<ResultDefinition>();
         var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
 
         // Only check for errors if there aren't return columns. Sometimes you can get an error without it being a show-stopping error
@@ -410,10 +411,10 @@ public class Generator
     {
         var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();
         var parameters = lookup.GetParametersForProcedure(settings.SchemaName, procedureSetting.Proc);
-        var resultColumns = procedureSetting.Return == ReturnType.None || procedureSetting.Return == ReturnType.Output
-            ? new List<ResultDefinition>()
-            : lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
-                allowProcedureExecution: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output);
+        var resultColumns = procedureSetting.LookupOutputTypes ?
+             lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
+                allowProcedureExecution: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output)
+                 : new List<ResultDefinition>();
         var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
         // Only check for errors if there aren't return columns. Sometimes you can get an error without it being a show-stopping error
         if (!resultColumns.Any() && resultMetaData.ReturnType != ReturnType.None && resultMetaData.ReturnType != ReturnType.Output)
@@ -564,10 +565,10 @@ public class Generator
     {
         var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();
         var parameters = lookup.GetParametersForProcedure(settings.SchemaName, procedureSetting.Proc);
-        var resultColumns = procedureSetting.Return == ReturnType.None || procedureSetting.Return == ReturnType.Output
-            ? new List<ResultDefinition>()
-            : lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
-                allowProcedureExecution: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output);
+        var resultColumns = procedureSetting.LookupOutputTypes
+            ? lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
+                allowProcedureExecution: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output)
+            : new List<ResultDefinition>();
         var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
         var methodReturnType = resultMetaData.ReturnType != ReturnType.None ? $@"Task<{resultMetaData.ReturnTypeCSharpString}>" : "Task";
 

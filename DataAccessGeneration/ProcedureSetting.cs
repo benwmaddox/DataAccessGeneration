@@ -11,4 +11,6 @@ public class ProcedureSetting
     
     // Spaces are valid in proc names, but not in C# names.
     public string GetName() => Name ?? Proc.Replace(" ", "_");
+
+    public bool LookupOutputTypes => Return != ReturnType.Output && this.Return != ReturnType.None;
 }
