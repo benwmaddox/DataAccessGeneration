@@ -177,7 +177,7 @@ ORDER BY rs.column_ordinal
 		}
 
 		// If can't use normal means to load the result set, try to get it from the procedure call. But it depends on knowing all the parameter default values
-		if (!results.Any())
+		if (!results.Any() && allowProcedureExecution)
 		{
 			if (parameters.All(x => x.DatabaseDefaultValue() != null))
 			{

@@ -352,8 +352,10 @@ public class Generator
     {
         var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();
         var parameters = lookup.GetParametersForProcedure(settings.SchemaName, procedureSetting.Proc);
-        var resultColumns = lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
-            allowProcedureExecution: procedureSetting.Return != ReturnType.None);
+        var resultColumns =
+            procedureSetting.Return  == ReturnType.None || procedureSetting.Return == ReturnType.Output ? new List<ResultDefinition>() :
+            lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
+            allowProcedureExecution: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output);
         var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
 
         // Only check for errors if there aren't return columns. Sometimes you can get an error without it being a show-stopping error
@@ -411,7 +413,7 @@ public class Generator
         var resultColumns = procedureSetting.Return == ReturnType.None || procedureSetting.Return == ReturnType.Output
             ? new List<ResultDefinition>()
             : lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
-                allowProcedureExecution: procedureSetting.Return != ReturnType.None);
+                allowProcedureExecution: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output);
         var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
         // Only check for errors if there aren't return columns. Sometimes you can get an error without it being a show-stopping error
         if (!resultColumns.Any() && resultMetaData.ReturnType != ReturnType.None && resultMetaData.ReturnType != ReturnType.Output)
@@ -565,7 +567,7 @@ public class Generator
         var resultColumns = procedureSetting.Return == ReturnType.None || procedureSetting.Return == ReturnType.Output
             ? new List<ResultDefinition>()
             : lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
-                allowProcedureExecution: procedureSetting.Return != ReturnType.None);
+                allowProcedureExecution: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output);
         var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
         var methodReturnType = resultMetaData.ReturnType != ReturnType.None ? $@"Task<{resultMetaData.ReturnTypeCSharpString}>" : "Task";
 
@@ -1036,7 +1038,7 @@ public class Generator
     private void VerifyProceduresAreInSchema(List<ProcedureSetting> procedures, List<ProcedureSetting> settingsProcedureList)
     {
         var procNames = procedures.Select(x => x.Proc).ToHashSet();
-        var unmatchedProcedures = settingsProcedureList.Where(x => !Enumerable.Contains(procNames, x.Proc, StringComparer.InvariantCultureIgnoreCase)).ToHashSet();
+        var unmatchedProcedures = settingsProcedureList.Where(x => !procNames.Contains(x.Proc, StringComparer.InvariantCultureIgnoreCase)).ToHashSet();
         if (unmatchedProcedures.Any())
         {
             var error = "Some specified procedures don't exist in the schema: "
