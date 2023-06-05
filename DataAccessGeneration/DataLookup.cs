@@ -146,7 +146,7 @@ ORDER BY p.parameter_id
 	}
 
 
-	public List<ResultDefinition> GetResultDefinitionsForProcedures(string schemaName, string procedureName, List<ParameterDefinition> parameters, bool allowProcedureExecution)
+	public List<ResultDefinition> GetResultDefinitionsForProcedures(string schemaName, string procedureName, List<ParameterDefinition> parameters, bool executeDuringGeneration)
 	{
 		var results = new List<ResultDefinition>();
 		using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -177,7 +177,7 @@ ORDER BY rs.column_ordinal
 		}
 
 		// If can't use normal means to load the result set, try to get it from the procedure call. But it depends on knowing all the parameter default values
-		if (!results.Any())
+		if (!results.Any() && executeDuringGeneration)
 		{
 			if (parameters.All(x => x.DatabaseDefaultValue() != null))
 			{
