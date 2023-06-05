@@ -355,7 +355,7 @@ public class Generator
         var resultColumns =
             procedureSetting.LookupOutputTypes
                 ? lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
-                    executeDuringGeneration: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output)
+                    executeDuringGeneration: procedureSetting.LookupOutputTypes)
                 : new List<ResultDefinition>();
         var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
 
@@ -411,10 +411,9 @@ public class Generator
     {
         var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();
         var parameters = lookup.GetParametersForProcedure(settings.SchemaName, procedureSetting.Proc);
-        var resultColumns = procedureSetting.LookupOutputTypes ?
-             lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
-                executeDuringGeneration: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output)
-                 : new List<ResultDefinition>();
+        var resultColumns = procedureSetting.LookupOutputTypes
+            ? lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters, executeDuringGeneration: procedureSetting.LookupOutputTypes)
+            : new List<ResultDefinition>();
         var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
         // Only check for errors if there aren't return columns. Sometimes you can get an error without it being a show-stopping error
         if (!resultColumns.Any() && resultMetaData.ReturnType != ReturnType.None && resultMetaData.ReturnType != ReturnType.Output)
@@ -567,7 +566,7 @@ public class Generator
         var parameters = lookup.GetParametersForProcedure(settings.SchemaName, procedureSetting.Proc);
         var resultColumns = procedureSetting.LookupOutputTypes
             ? lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
-                executeDuringGeneration: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output)
+                executeDuringGeneration: procedureSetting.LookupOutputTypes)
             : new List<ResultDefinition>();
         var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
         var methodReturnType = resultMetaData.ReturnType != ReturnType.None ? $@"Task<{resultMetaData.ReturnTypeCSharpString}>" : "Task";
