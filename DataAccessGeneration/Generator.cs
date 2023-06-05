@@ -36,7 +36,7 @@ public class Generator
                 loadStarted++;
                 CurrentActivity = $"{settings.RepositoryName}: Loading procedure information {loadStarted} of {procedures.Count}";
                 var parameters = dataLookup.GetParametersForProcedure(settings.SchemaName, procedure.Proc);
-                var results = dataLookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedure.Proc, parameters, allowProcedureExecution: true);
+                var results = dataLookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedure.Proc, parameters, executeDuringGeneration: true);
                 procedure.Return = results.Any() ? ReturnType.List : ReturnType.None;
                 if (Char.IsDigit(procedure.Proc[0]))
                 {
@@ -355,7 +355,7 @@ public class Generator
         var resultColumns =
             procedureSetting.LookupOutputTypes
                 ? lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
-                    allowProcedureExecution: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output)
+                    executeDuringGeneration: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output)
                 : new List<ResultDefinition>();
         var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
 
@@ -413,7 +413,7 @@ public class Generator
         var parameters = lookup.GetParametersForProcedure(settings.SchemaName, procedureSetting.Proc);
         var resultColumns = procedureSetting.LookupOutputTypes ?
              lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
-                allowProcedureExecution: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output)
+                executeDuringGeneration: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output)
                  : new List<ResultDefinition>();
         var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
         // Only check for errors if there aren't return columns. Sometimes you can get an error without it being a show-stopping error
@@ -567,7 +567,7 @@ public class Generator
         var parameters = lookup.GetParametersForProcedure(settings.SchemaName, procedureSetting.Proc);
         var resultColumns = procedureSetting.LookupOutputTypes
             ? lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
-                allowProcedureExecution: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output)
+                executeDuringGeneration: procedureSetting.Return != ReturnType.None && procedureSetting.Return != ReturnType.Output)
             : new List<ResultDefinition>();
         var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
         var methodReturnType = resultMetaData.ReturnType != ReturnType.None ? $@"Task<{resultMetaData.ReturnTypeCSharpString}>" : "Task";
