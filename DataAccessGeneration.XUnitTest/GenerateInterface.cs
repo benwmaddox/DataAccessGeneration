@@ -20,7 +20,7 @@ public class GenerateInterface
             },
             "Repo", "Proc_Result", new FakeDataLookup()
             {
-                GetUserDefinedTypeData = new UserDefinedTableGrouping()
+                GetUserDefinedTypeData = new UserDefinedTypeGrouping()
                 {
                     UDTTypeName = "UDFProperty",
                     Rows = new List<UserDefinedTableRowDefinition>()
@@ -35,19 +35,6 @@ public class GenerateInterface
                     }
                 }
             });
-        /*
-         *, new List<UserDefinedTableRowDefinition>()
-            {
-                new UserDefinedTableRowDefinition()
-                {
-                    TypeName = "uniqueidentifier",
-                    TableTypeName = "UDFProperty",
-                    ColumnName = "InnerColumnName",
-                    SchemaName = "DBO"
-                }
-            }
-         *
-         */
         var expected = @"IEnumerable<Guid>";
 
         Assert.Contains(expected, result);

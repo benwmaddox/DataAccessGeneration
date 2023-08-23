@@ -225,8 +225,8 @@ ORDER BY rs.column_ordinal
 	}
 
 
-    private List<UserDefinedTableGrouping>? _udtGroupings = null;
-    public UserDefinedTableGrouping? GetUserDefinedType(string schemaName, string udtName)
+    private List<UserDefinedTypeGrouping>? _udtGroupings = null;
+    public UserDefinedTypeGrouping? GetUserDefinedType(string schemaName, string udtName)
     {
         _udtGroupings ??= GetUserDefinedTypes();
         var match = _udtGroupings.SingleOrDefault(x => x.SchemaName == schemaName && x.UDTTypeName == udtName);
@@ -259,7 +259,7 @@ FROM sys.dm_exec_describe_first_result_set('{schemaName}.{procedureName}', NULL,
 		return results.FirstOrDefault(x => x != null);
 	}
 
-	public List<UserDefinedTableGrouping> GetUserDefinedTypes()
+	public List<UserDefinedTypeGrouping> GetUserDefinedTypes()
 	{
 		var results = new List<UserDefinedTableRowDefinition>();
 		using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -296,7 +296,7 @@ ORDER BY s.name, c.column_id
 				});
 			}
 		}
-        var groupings = results.GroupBy(x => new { x.SchemaName, x.TableTypeName }).Select(x => new UserDefinedTableGrouping()
+        var groupings = results.GroupBy(x => new { x.SchemaName, x.TableTypeName }).Select(x => new UserDefinedTypeGrouping()
         {
             UDTTypeName = x.Key.TableTypeName,
             SchemaName = x.Key.SchemaName,

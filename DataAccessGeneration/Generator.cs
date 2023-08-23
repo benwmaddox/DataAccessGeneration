@@ -957,7 +957,7 @@ public class Generator
     }
 
 
-    private static List<OutputFile> GenerateUserDefinedTypeClasses(List<UserDefinedTableGrouping> userDefinedTypeGroup, string settingsNamespace, IDataLookup lookup)
+    private static List<OutputFile> GenerateUserDefinedTypeClasses(List<UserDefinedTypeGrouping> userDefinedTypeGroup, string settingsNamespace, IDataLookup lookup)
     {
 
         var results =

@@ -69,7 +69,7 @@ public class ResultSetDefinitionTests
                     DefaultValue = null
                 }
             },
-            GetUserDefinedTypesData = new List<UserDefinedTableGrouping>()
+            GetUserDefinedTypesData = new List<UserDefinedTypeGrouping>()
             {
                 
             }

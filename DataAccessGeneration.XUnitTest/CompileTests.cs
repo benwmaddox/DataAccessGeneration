@@ -78,7 +78,7 @@ public class CompileTests
                     DefaultValue = null
                 }
             },
-            GetUserDefinedTypesData = new List<UserDefinedTableGrouping>()
+            GetUserDefinedTypesData = new List<UserDefinedTypeGrouping>()
             {
                 
             }
