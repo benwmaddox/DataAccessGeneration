@@ -205,13 +205,13 @@ namespace DataAccessGeneration
 			return result;
 		}
 
-		public static string ToCamelCase(this string input)
+		public static string ToParameterCase(this string input)
 		{
 			if (string.IsNullOrEmpty(input))
 				return input;
 
             string[] split = input.Split("_")
-                .Select(x => x.SplitCamelCase())
+                .Select(x => x.SplitForParameterCase())
                 .SelectMany(x => x)
                 .Where(x => x.Length > 0)
                 .ToArray();
@@ -227,7 +227,7 @@ namespace DataAccessGeneration
             return string.Join("", split);
         }
 
-        public static string[] SplitCamelCase(this string source)
+        public static string[] SplitForParameterCase(this string source)
         {
             return Regex.Split(source, @"(?<=[a-z])(?=[A-Z])|(?<=[A-Z]*)(?=[A-Z][a-z]+)");
         }

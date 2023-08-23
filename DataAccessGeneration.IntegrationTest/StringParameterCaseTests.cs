@@ -1,6 +1,6 @@
 namespace DataAccessGeneration.XUnitTest;
 
-public class StringCamelCaseTests
+public class StringParameterCaseTests
 {
     [Theory()]
     [InlineData("DATERange", "dateRange")]
@@ -11,9 +11,9 @@ public class StringCamelCaseTests
     [InlineData("userIDs", "userIDs")]
     [InlineData("userID", "userId")]
     [InlineData("user_ID", "userId")]
-    public void CamelCaseConversion(string input, string expectedOutput)
+    public void ParameterCaseConversion(string input, string expectedOutput)
     {
-        Assert.Equal(expectedOutput, input.ToCamelCase());
+        Assert.Equal(expectedOutput, input.ToParameterCase());
     }
 
 }

@@ -587,12 +587,12 @@ public class Generator
         if (parameters.Any())
         {
             var shortHandMethod = parameters.Count < 4
-                ? $@"{resultType} {procName}({string.Join(", ", parameters.Select(p => p.CSharpType(dataLookup) + " " + p.CSharpPropertyName().ToCamelCase()))});"
+                ? $@"{resultType} {procName}({string.Join(", ", parameters.Select(p => p.CSharpType(dataLookup) + " " + p.CSharpPropertyName().ToParameterCase()))});"
                 : "";
             
             var typeMatch = parameters.Count == 1 ? dataLookup.GetUserDefinedType(parameters.Single().TypeSchema, parameters.Single().TypeName) : null;
             var udtMethod = typeMatch != null && typeMatch.Rows.Count == 1 && parameters.Count == 1
-                ? $"{resultType} {procName}(IEnumerable<{typeMatch.Rows.Single().CSharpType(isNullable:false)}> {parameters.Single().CSharpPropertyName().ToCamelCase()});" 
+                ? $"{resultType} {procName}(IEnumerable<{typeMatch.Rows.Single().CSharpType(isNullable:false)}> {parameters.Single().CSharpPropertyName().ToParameterCase()});" 
                 : "";
 
             sb.AppendLine($@"
@@ -644,8 +644,8 @@ public class Generator
     {
         if (parameters.Any() && parameters.Count < 4)
         {
-            var parameterList = string.Join(", ", parameters.Select(p => p.CSharpType(lookup) + " " + p.CSharpPropertyName().ToCamelCase()));
-            var propertyAssignmentList = string.Join("," + Environment.NewLine, parameters.Select(p => p.CSharpPropertyName() + " = " + p.CSharpPropertyName().ToCamelCase()));
+            var parameterList = string.Join(", ", parameters.Select(p => p.CSharpType(lookup) + " " + p.CSharpPropertyName().ToParameterCase()));
+            var propertyAssignmentList = string.Join("," + Environment.NewLine, parameters.Select(p => p.CSharpPropertyName() + " = " + p.CSharpPropertyName().ToParameterCase()));
             var returnLine = resultMetaData.ReturnType != ReturnType.None
                 ? $"return await {procName}(parameters);"
                 : $"await {procName}(parameters);";
@@ -676,11 +676,11 @@ public class Generator
             : $"await {procName}(parameters);";
 
         return $@"
-            public async {methodReturnType} {procName}(IEnumerable<{typeMatch.CSharpType(isNullable:false)}> {parameters.Single().CSharpPropertyName().ToCamelCase()})
+            public async {methodReturnType} {procName}(IEnumerable<{typeMatch.CSharpType(isNullable:false)}> {parameters.Single().CSharpPropertyName().ToParameterCase()})
             {{
                 var parameters = new {procName}_Parameters()
 	            {{
-                    {parameters.Single().CSharpPropertyName()} = {parameters.Single().CSharpPropertyName().ToCamelCase()}.Select(item => new {typeMatch.TableTypeName}()
+                    {parameters.Single().CSharpPropertyName()} = {parameters.Single().CSharpPropertyName().ToParameterCase()}.Select(item => new {typeMatch.TableTypeName}()
                     {{
                         {typeMatch.CSharpPropertyName()} = item
                     }}).ToList()
