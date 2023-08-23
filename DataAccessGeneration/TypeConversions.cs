@@ -228,7 +228,7 @@ namespace DataAccessGeneration
 
         public static string[] SplitCamelCase(this string source)
         {
-            return Regex.Split(source, @"(?<!^)(?=[A-Z](?![A-Z]|$))");
+            return Regex.Split(source, @"(?<=[a-z])(?=[A-Z])");
         }
 
         /// <summary>
