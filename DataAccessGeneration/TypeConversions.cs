@@ -209,18 +209,33 @@ namespace DataAccessGeneration
 		{
 			if (string.IsNullOrEmpty(input))
 				return input;
-			
-			if (input.Length > 1 && char.IsUpper(input[0]) && !char.IsUpper(input[1]))
-				return char.ToLowerInvariant(input[0]) + input.Substring(1);
 
-			return input.ToLowerInvariant();
-		}
+            string[] split = input.Split("_")
+                .Select(x => x.SplitCamelCase())
+                .SelectMany(x => x)
+                .ToArray();
 
-		/// <summary>
-		/// Sometimes the conversion from C# types isn't exact and this will force a conversion at runtime before calling to the database.
-		/// The stack trace should be more precise because it would hit prior to executing the database call.
-		/// </summary>
-		public static string? ParameterDataVerification(this ParameterDefinition parameter)
+            split[0] = split[0].ToLower();
+            for (var i = 1; i < split.Length;i++)
+            {
+				if (split[i].Length == 0) continue;
+
+                split[i] = char.ToUpper(split[i][0]) + split[i].Substring(1).ToLower();
+            }
+
+            return string.Join("", split);
+        }
+
+        public static string[] SplitCamelCase(this string source)
+        {
+            return Regex.Split(source, @"(?<!^)(?=[A-Z](?![A-Z]|$))");
+        }
+
+        /// <summary>
+        /// Sometimes the conversion from C# types isn't exact and this will force a conversion at runtime before calling to the database.
+        /// The stack trace should be more precise because it would hit prior to executing the database call.
+        /// </summary>
+        public static string? ParameterDataVerification(this ParameterDefinition parameter)
 		{
 			if (parameter.TypeName == "datetime")
 			{
