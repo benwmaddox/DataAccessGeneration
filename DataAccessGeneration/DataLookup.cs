@@ -223,9 +223,21 @@ ORDER BY rs.column_ordinal
 
 		return results;
 	}
-	
-	
-	public string? GetResultDefinitionsErrorsForProcedures(string schemaName, string procedureName)
+
+
+    private List<UserDefinedTypeGrouping>? _udtGroupings = null;
+    public UserDefinedTypeGrouping? GetUserDefinedType(string schemaName, string udtName)
+    {
+        _udtGroupings ??= GetUserDefinedTypes();
+        var match = _udtGroupings.SingleOrDefault(x => x.SchemaName == schemaName && x.UDTTypeName == udtName);
+        if (match != null)
+        {
+            match.RetrievedForUse = true;
+        }
+        return match;
+    }
+
+    public string? GetResultDefinitionsErrorsForProcedures(string schemaName, string procedureName)
 	{
 		var results = new List<string?>();
 		using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -247,7 +259,7 @@ FROM sys.dm_exec_describe_first_result_set('{schemaName}.{procedureName}', NULL,
 		return results.FirstOrDefault(x => x != null);
 	}
 
-	public List<UserDefinedTableRowDefinition> GetUserDefinedTypes(string schemaName)
+	public List<UserDefinedTypeGrouping> GetUserDefinedTypes()
 	{
 		var results = new List<UserDefinedTableRowDefinition>();
 		using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -284,9 +296,22 @@ ORDER BY s.name, c.column_id
 				});
 			}
 		}
+        var groupings = results.GroupBy(x => new { x.SchemaName, x.TableTypeName }).Select(x => new UserDefinedTypeGrouping()
+        {
+            UDTTypeName = x.Key.TableTypeName,
+            SchemaName = x.Key.SchemaName,
+            Rows = x.ToList()
+        }).ToList();
 
-		return results;
-	}
+        foreach (var item in groupings)
+        {
+            item.RequiresSchemaToDisambiguate = groupings.Any(x => x.UDTTypeName == item.UDTTypeName && x.SchemaName != item.SchemaName);
+        }
+
+        _udtGroupings = groupings;
+        return groupings;
+
+    }
 
 	public List<ResultDefinition> GetSystemTypes()
 	{

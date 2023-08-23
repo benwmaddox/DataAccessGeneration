@@ -78,7 +78,7 @@ public partial class SampleRepository
                                  TypeName = "int"
                              },
 
-                         }, "SampleProc", new List<string>())
+                         }, "SampleProc", new FakeDataLookup())
                          ?? throw new Exception("Failed to generate");
 
 
@@ -94,13 +94,13 @@ public partial class SampleRepository
         if (actual != expected) NotEqualError(expected, actual);
     }
 
-    public static string? GenerateParameterDefinition(List<ParameterDefinition> parameters, string procName, List<string> userDefinedTypeNames)
+    public static string? GenerateParameterDefinition(List<ParameterDefinition> parameters, string procName, IDataLookup lookup)
     {
         return parameters.Any()
             ? $@"public partial class {procName}_Parameters
 							{{{string.Join("", parameters.Select(p =>
                                 $@"
-								public {p.CSharpType(userDefinedTypeNames)} {p.CSharpPropertyName()} {{ get; set; }}"
+								public {p.CSharpType(lookup)} {p.CSharpPropertyName()} {{ get; set; }}"
                             ))}		
 							}}"
             : null;

@@ -13,9 +13,11 @@ public class FakeDataLookup : IDataLookup
     public List<ResultDefinition> GetResultDefinitionsForProcedureData = new List<ResultDefinition>();
     public List<ResultDefinition> GetResultDefinitionsForProcedures(string schemaName, string procedureName, List<ParameterDefinition> parameters, bool executeDuringGeneration) => GetResultDefinitionsForProcedureData;
 
-    public List<UserDefinedTableRowDefinition> GetUserDefinedTypesData = new List<UserDefinedTableRowDefinition>();
-    public List<UserDefinedTableRowDefinition> GetUserDefinedTypes(string schemaName) => GetUserDefinedTypesData;
+    public List<UserDefinedTypeGrouping> GetUserDefinedTypesData = new List<UserDefinedTypeGrouping>();
+    public List<UserDefinedTypeGrouping> GetUserDefinedTypes() => GetUserDefinedTypesData;
 
+    public UserDefinedTypeGrouping? GetUserDefinedTypeData = null;
+    public UserDefinedTypeGrouping? GetUserDefinedType(string schemaName, string udtName) => GetUserDefinedTypeData;
     public string? GetResultDefinitionsErrorsForProceduresData { get; set; } = null;
     public string? GetResultDefinitionsErrorsForProcedures(string schemaName, string procedureName) => GetResultDefinitionsErrorsForProceduresData;
 }

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Linq;
+using System.Text;
 
 namespace DataAccessGeneration;
 
@@ -51,10 +52,7 @@ public class Generator
         }
 
         CurrentActivity = $"{settings.RepositoryName} loading user defined types";
-        var userDefinedTypes = dataLookup.GetUserDefinedTypes(settings.SchemaName);
-        var userDefinedTypeClasses = GenerateUserDefinedTypeClasses(userDefinedTypes, settings.Namespace);
-        CurrentActivity = $"{settings.RepositoryName} writing user defined types";
-        _fileManager.WriteFiles(outputDirectory, userDefinedTypeClasses);
+        var userDefinedTypes = dataLookup.GetUserDefinedTypes();
         var repoClass = GenerateRepoClassWithConstructor(settings);
         _fileManager.WriteFiles(outputDirectory, repoClass);
         List<OutputFile> fakeRepoClasses = new List<OutputFile>();
@@ -70,16 +68,19 @@ public class Generator
         {
             generateStarted++;
             CurrentActivity = $"{settings.RepositoryName} Generating procedure {generateStarted} of {procedures.Count}: {procedure.Proc}";
-            procedureClasses.Add(GenerateProcedure(procedure, userDefinedTypes, settings, dataLookup));
+            procedureClasses.Add(GenerateProcedure(procedure, settings, dataLookup));
             if (settings.IncludeFakes)
             {
-                procedureClasses.Add(GenerateFakeForProcedure(procedure, userDefinedTypes, settings, dataLookup));
+                procedureClasses.Add(GenerateFakeForProcedure(procedure, settings, dataLookup));
             }
 
-            procedureClasses.Add(GenerateTransactionManagedProcedure(procedure, userDefinedTypes, settings, dataLookup));
-
+            procedureClasses.Add(GenerateTransactionManagedProcedure(procedure, settings, dataLookup));
         });
         _fileManager.WriteFiles(outputDirectory, procedureClasses);
+
+        var userDefinedTypeClasses = GenerateUserDefinedTypeClasses(userDefinedTypes.Where(x => x.RetrievedForUse).ToList(), settings.Namespace, dataLookup);
+        CurrentActivity = $"{settings.RepositoryName} writing user defined types";
+        _fileManager.WriteFiles(outputDirectory, userDefinedTypeClasses);
 
         var filesToKeep = procedureClasses.Select(x => x.RelativeFilePath)
             .Concat(userDefinedTypeClasses.Select(x => x.RelativeFilePath))
@@ -276,7 +277,7 @@ public class Generator
                 }}";
     }
 
-    private ResultMetaData GetResultMetaData(ProcedureSetting procedureSetting, List<ResultDefinition> resultColumns, List<ParameterDefinition> parameters)
+    private ResultMetaData GetResultMetaData(ProcedureSetting procedureSetting, List<ResultDefinition> resultColumns, List<ParameterDefinition> parameters, IDataLookup lookup)
     {
         var methodReturnType = GetReturnType(procedureSetting, resultColumns, parameters);
         var properties = new List<ResultPropertyMetaData>();
@@ -318,8 +319,8 @@ public class Generator
                         CSharpName = outputParameter.CSharpPropertyName(),
                         DatabaseName = outputParameter.Name,
                         IsNullable = true,
-                        DefaultPropertyAssignment = GetDefaultString(outputParameter.CSharpType()),
-                        CSharpType = outputParameter.CSharpType()
+                        DefaultPropertyAssignment = GetDefaultString(outputParameter.CSharpType(lookup: lookup)),
+                        CSharpType = outputParameter.CSharpType(lookup: lookup)
                     });
                 }
 
@@ -347,17 +348,15 @@ public class Generator
         return result;
     }
 
-    private OutputFile GenerateProcedure(ProcedureSetting procedureSetting, List<UserDefinedTableRowDefinition> userDefinedTypes, Settings settings,
-        IDataLookup lookup)
+    private OutputFile GenerateProcedure(ProcedureSetting procedureSetting, Settings settings, IDataLookup lookup)
     {
-        var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();
         var parameters = lookup.GetParametersForProcedure(settings.SchemaName, procedureSetting.Proc);
         var resultColumns =
             procedureSetting.LookupOutputTypes
                 ? lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
                     executeDuringGeneration: procedureSetting.LookupOutputTypes)
                 : new List<ResultDefinition>();
-        var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
+        var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters, lookup);
 
         // Only check for errors if there aren't return columns. Sometimes you can get an error without it being a show-stopping error
         if (!resultColumns.Any() && resultMetaData.ReturnType != ReturnType.None && resultMetaData.ReturnType != ReturnType.Output)
@@ -374,7 +373,7 @@ public class Generator
 
         var sb = new StringBuilder();
 
-        var parameterDefinition = GenerateParameterDefinition(parameters, procedureSetting, userDefinedTypeNames);
+        var parameterDefinition = GenerateParameterDefinition(parameters, procedureSetting, lookup);
         if (parameterDefinition != null)
         {
             sb.AppendLine(parameterDefinition);
@@ -383,18 +382,18 @@ public class Generator
 
         if (resultMetaData.ReturnType != ReturnType.None)
         {
-            sb.AppendLine(GenerateResultSetClass(procedureSetting, resultMetaData, userDefinedTypeNames, parameters));
+            sb.AppendLine(GenerateResultSetClass(procedureSetting, resultMetaData, parameters, lookup));
         }
 
-        sb.AppendLine(GenerateInterface(procedureSetting.GetName(), parameters, settings.RepositoryName!, methodReturnType, userDefinedTypeNames, userDefinedTypes));
+        sb.AppendLine(GenerateInterface(procedureSetting.GetName(), parameters, settings.RepositoryName!, methodReturnType, lookup));
 
         sb.AppendLine(
             $@"
             public partial class {settings.RepositoryName} : I{settings.RepositoryName}
             {{
-                {AddProcedureCallingMethod(procedureSetting, parameters, userDefinedTypeNames, methodReturnType, settings, userDefinedTypes, resultMetaData)}
-                {AddShorthandMethod(procedureSetting.GetName(), parameters, userDefinedTypeNames, methodReturnType, resultMetaData)}
-                {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, userDefinedTypes, methodReturnType, resultMetaData)}
+                {AddProcedureCallingMethod(procedureSetting, parameters,  methodReturnType, settings, resultMetaData, lookup)}
+                {AddShorthandMethod(procedureSetting.GetName(), parameters,methodReturnType, resultMetaData, lookup)}
+                {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
             }}
         ");
 
@@ -405,16 +404,13 @@ public class Generator
 
 
 
-    private OutputFile GenerateTransactionManagedProcedure(ProcedureSetting procedureSetting, List<UserDefinedTableRowDefinition> userDefinedTypes,
-        Settings settings,
-        IDataLookup lookup)
+    private OutputFile GenerateTransactionManagedProcedure(ProcedureSetting procedureSetting, Settings settings, IDataLookup lookup)
     {
-        var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();
         var parameters = lookup.GetParametersForProcedure(settings.SchemaName, procedureSetting.Proc);
         var resultColumns = procedureSetting.LookupOutputTypes
             ? lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters, executeDuringGeneration: procedureSetting.LookupOutputTypes)
             : new List<ResultDefinition>();
-        var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
+        var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters, lookup);
         // Only check for errors if there aren't return columns. Sometimes you can get an error without it being a show-stopping error
         if (!resultColumns.Any() && resultMetaData.ReturnType != ReturnType.None && resultMetaData.ReturnType != ReturnType.Output)
         {
@@ -435,9 +431,9 @@ public class Generator
         {{
             public partial class TransactionManaged :  I{settings.RepositoryName}
             {{
-                {AddProcedureCallingMethod(procedureSetting, parameters, userDefinedTypeNames, methodReturnType, settings, userDefinedTypes, resultMetaData, false)}
-                {AddShorthandMethod(procedureSetting.GetName(), parameters, userDefinedTypeNames, methodReturnType, resultMetaData)}
-                {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, userDefinedTypes, methodReturnType, resultMetaData)}
+                {AddProcedureCallingMethod(procedureSetting, parameters, methodReturnType, settings, resultMetaData, lookup, false)}
+                {AddShorthandMethod(procedureSetting.GetName(), parameters,  methodReturnType, resultMetaData, lookup)}
+                {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
             }}
         }}");
 
@@ -447,7 +443,7 @@ public class Generator
     }
 
 
-    private static string? GenerateResultSetClass(ProcedureSetting procedureSetting, ResultMetaData resultMetaData, List<string> userDefinedTypeNames, List<ParameterDefinition> parameters)
+    private static string? GenerateResultSetClass(ProcedureSetting procedureSetting, ResultMetaData resultMetaData, List<ParameterDefinition> parameters, IDataLookup lookup)
     {
         switch (resultMetaData.ReturnType)
         {
@@ -466,7 +462,7 @@ public class Generator
                 return $@"
                         public partial class {procedureSetting.GetName()}_ResultSet
                         {{
-                            {CSharpProperties(parameters.Where(x => x.IsOutput).ToList(), userDefinedTypeNames)}
+                            {CSharpProperties(parameters.Where(x => x.IsOutput).ToList(), lookup)}
                         }}";
             default:
                 throw new ArgumentOutOfRangeException();
@@ -559,16 +555,15 @@ public class Generator
         }
     }
 
-    private OutputFile GenerateFakeForProcedure(ProcedureSetting procedureSetting, List<UserDefinedTableRowDefinition> userDefinedTypes, Settings settings,
+    private OutputFile GenerateFakeForProcedure(ProcedureSetting procedureSetting,  Settings settings,
         IDataLookup lookup)
     {
-        var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();
         var parameters = lookup.GetParametersForProcedure(settings.SchemaName, procedureSetting.Proc);
         var resultColumns = procedureSetting.LookupOutputTypes
             ? lookup.GetResultDefinitionsForProcedures(settings.SchemaName, procedureSetting.Proc, parameters,
                 executeDuringGeneration: procedureSetting.LookupOutputTypes)
             : new List<ResultDefinition>();
-        var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters);
+        var resultMetaData = GetResultMetaData(procedureSetting, resultColumns, parameters, lookup);
         var methodReturnType = resultMetaData.ReturnType != ReturnType.None ? $@"Task<{resultMetaData.ReturnTypeCSharpString}>" : "Task";
 
         var sb = new StringBuilder();
@@ -576,8 +571,8 @@ public class Generator
         sb.AppendLine($@"public partial class Fake{settings.RepositoryName} : I{settings.RepositoryName}
         {{
             {AddFakeProcedureCallingMethod(procedureSetting, parameters, methodReturnType, settings, resultMetaData)}
-            {AddShorthandMethod(procedureSetting.GetName(), parameters, userDefinedTypeNames, methodReturnType, resultMetaData)}
-            {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, userDefinedTypes, methodReturnType, resultMetaData)}
+            {AddShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
+            {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
         }}");
 
         return new OutputFile($"Fake/{procedureSetting.GetName()}.generated.cs",
@@ -586,20 +581,18 @@ public class Generator
 
     }
 
-    public static string GenerateInterface(string procName, List<ParameterDefinition> parameters, string repoName, string resultType, List<string> userDefinedTypeNames,
-        List<UserDefinedTableRowDefinition> userDefinedTypes)
+    public static string GenerateInterface(string procName, List<ParameterDefinition> parameters, string repoName, string resultType, IDataLookup dataLookup)
     {
         StringBuilder sb = new StringBuilder();
         if (parameters.Any())
         {
             var shortHandMethod = parameters.Count < 4
-                ? $@"{resultType} {procName}({string.Join(", ", parameters.Select(p => p.CSharpType(userDefinedTypeNames) + " " + p.CSharpPropertyName().ToCamelCase()))});"
+                ? $@"{resultType} {procName}({string.Join(", ", parameters.Select(p => p.CSharpType(dataLookup) + " " + p.CSharpPropertyName().ToParameterCase()))});"
                 : "";
-
-            var typeMatches = parameters.Count == 1 ? userDefinedTypes.Where(x => x.TableTypeName == parameters.Single().TypeName).ToList() : new List<UserDefinedTableRowDefinition>();
-            var typeMatch = typeMatches.FirstOrDefault();
-            var udtMethod = typeMatches.Count == 1 && typeMatch != null && parameters.Count == 1
-                ? $"{resultType} {procName}(IEnumerable<{typeMatch.CSharpType(isNullable:false)}> {parameters.Single().CSharpPropertyName().ToCamelCase()});" 
+            
+            var typeMatch = parameters.Count == 1 ? dataLookup.GetUserDefinedType(parameters.Single().TypeSchema, parameters.Single().TypeName) : null;
+            var udtMethod = typeMatch != null && typeMatch.Rows.Count == 1 && parameters.Count == 1
+                ? $"{resultType} {procName}(IEnumerable<{typeMatch.Rows.Single().CSharpType(isNullable:false)}> {parameters.Single().CSharpPropertyName().ToParameterCase()});" 
                 : "";
 
             sb.AppendLine($@"
@@ -623,11 +616,11 @@ public class Generator
     }
 
 
-    public static string? GenerateParameterDefinition(List<ParameterDefinition> parameters, ProcedureSetting procedureSetting, List<string> userDefinedTypeNames)
+    public static string? GenerateParameterDefinition(List<ParameterDefinition> parameters, ProcedureSetting procedureSetting, IDataLookup lookup)
     {
         var cSharpProperties = string.Join("", parameters.Select(p =>
             CalculateParameterSummary(p)
-            + $"\npublic {p.CSharpType(userDefinedTypeNames)} {p.CSharpPropertyName()} {{ get; set; }}"
+            + $"\npublic {p.CSharpType(lookup)} {p.CSharpPropertyName()} {{ get; set; }}"
         ));
         return parameters.Any()
             ? $@"
@@ -647,12 +640,12 @@ public class Generator
         return "\n/// <summary>" + data + "\n/// </summary>";
     }
 
-    private static string AddShorthandMethod(string procName, List<ParameterDefinition> parameters, List<string> userDefinedTypeNames, string methodReturnType, ResultMetaData resultMetaData)
+    private static string AddShorthandMethod(string procName, List<ParameterDefinition> parameters,  string methodReturnType, ResultMetaData resultMetaData, IDataLookup lookup)
     {
         if (parameters.Any() && parameters.Count < 4)
         {
-            var parameterList = string.Join(", ", parameters.Select(p => p.CSharpType(userDefinedTypeNames) + " " + p.CSharpPropertyName().ToCamelCase()));
-            var propertyAssignmentList = string.Join("," + Environment.NewLine, parameters.Select(p => p.CSharpPropertyName() + " = " + p.CSharpPropertyName().ToCamelCase()));
+            var parameterList = string.Join(", ", parameters.Select(p => p.CSharpType(lookup) + " " + p.CSharpPropertyName().ToParameterCase()));
+            var propertyAssignmentList = string.Join("," + Environment.NewLine, parameters.Select(p => p.CSharpPropertyName() + " = " + p.CSharpPropertyName().ToParameterCase()));
             var returnLine = resultMetaData.ReturnType != ReturnType.None
                 ? $"return await {procName}(parameters);"
                 : $"await {procName}(parameters);";
@@ -671,11 +664,11 @@ public class Generator
 
         return "";
     }
-    private static string AddUDTShorthandMethod(string procName, List<ParameterDefinition> parameters, List<UserDefinedTableRowDefinition> userDefinedTypes, string methodReturnType, ResultMetaData resultMetaData)
+    private static string AddUDTShorthandMethod(string procName, List<ParameterDefinition> parameters,  string methodReturnType, ResultMetaData resultMetaData, IDataLookup dataLookup)
     {
         if (parameters.Count != 1) return "";
-        var typeMatches = userDefinedTypes.Where(x => x.TableTypeName == parameters.Single().TypeName).ToList();
-        if (typeMatches.Count != 1) return "";
+        var typeMatches = dataLookup.GetUserDefinedType(parameters.Single().TypeSchema, parameters.Single().TypeName)?.Rows;
+        if (typeMatches == null || typeMatches.Count != 1) return "";
         var typeMatch = typeMatches.Single();
         
         var returnLine = resultMetaData.ReturnType != ReturnType.None
@@ -683,11 +676,11 @@ public class Generator
             : $"await {procName}(parameters);";
 
         return $@"
-            public async {methodReturnType} {procName}(IEnumerable<{typeMatch.CSharpType(isNullable:false)}> {parameters.Single().CSharpPropertyName().ToCamelCase()})
+            public async {methodReturnType} {procName}(IEnumerable<{typeMatch.CSharpType(isNullable:false)}> {parameters.Single().CSharpPropertyName().ToParameterCase()})
             {{
                 var parameters = new {procName}_Parameters()
 	            {{
-                    {parameters.Single().CSharpPropertyName()} = {parameters.Single().CSharpPropertyName().ToCamelCase()}.Select(item => new {typeMatch.TableTypeName}()
+                    {parameters.Single().CSharpPropertyName()} = {parameters.Single().CSharpPropertyName().ToParameterCase()}.Select(item => new {typeMatch.TableTypeName}()
                     {{
                         {typeMatch.CSharpPropertyName()} = item
                     }}).ToList()
@@ -697,8 +690,8 @@ public class Generator
 ";
     }
 
-    private static string AddProcedureCallingMethod(ProcedureSetting procedureSetting, List<ParameterDefinition> parameters, List<string> userDefinedTypeNames, string methodReturnType,
-        Settings settings, List<UserDefinedTableRowDefinition> userDefinedTypes, ResultMetaData resultMetaData, bool includeConnectionCreation = true)
+    private static string AddProcedureCallingMethod(ProcedureSetting procedureSetting, List<ParameterDefinition> parameters, string methodReturnType,
+        Settings settings, ResultMetaData resultMetaData, IDataLookup lookup, bool includeConnectionCreation = true)
     {
         StringBuilder sb = new StringBuilder();
         if (parameters.Any())
@@ -732,12 +725,13 @@ public class Generator
             {
                 foreach (var p in parameters)
                 {
-                    if (userDefinedTypeNames.Contains(p.TypeName))
+                    var udtMatch = lookup.GetUserDefinedType(p.TypeSchema, p.TypeName);
+                    if (udtMatch != null)
                     {
                         // Data table for user defined types
                         sb.AppendLine($@"var dt{p.CSharpPropertyName()} = new DataTable();");
-                        var udtTypeColumns = userDefinedTypes.Where(dt => dt.TableTypeName == p.TypeName).ToList();
-                        foreach (var udtTypeColumn in udtTypeColumns)
+                        
+                        foreach (var udtTypeColumn in udtMatch.Rows)
                         {
                             sb.AppendLine($"dt{p.CSharpPropertyName()}.Columns.Add(\"{udtTypeColumn.ColumnName}\", typeof({udtTypeColumn.CSharpType(isNullable: false)}));");
                         }
@@ -747,7 +741,7 @@ public class Generator
                                 dt{p.CSharpPropertyName()}.Rows.Add(new object?[]
                                 {{
                                     {
-                                        string.Join("," + Environment.NewLine, udtTypeColumns.Select(dt => $@"(object?)p.{dt.ColumnName} ?? DBNull.Value"))
+                                        string.Join("," + Environment.NewLine, udtMatch.Rows.Select(dt => $@"(object?)p.{dt.ColumnName} ?? DBNull.Value"))
                                     }
                                 }}));"
                         );
@@ -789,7 +783,7 @@ public class Generator
 
                 sb.AppendLine($@"if (connection.State != ConnectionState.Open) await connection.OpenAsync();");
 
-                AppendResultAssignment(sb, procedureSetting, parameters, resultMetaData);
+                AppendResultAssignment(sb, procedureSetting, parameters, resultMetaData, lookup);
 
                 // sb.AppendLine($@"await connection.CloseAsync();");
             }
@@ -826,7 +820,7 @@ public class Generator
         return sb.ToString();
     }
 
-    private static void AppendResultAssignment(StringBuilder sb, ProcedureSetting procedureSetting, List<ParameterDefinition> parameters, ResultMetaData resultMeta)
+    private static void AppendResultAssignment(StringBuilder sb, ProcedureSetting procedureSetting, List<ParameterDefinition> parameters, ResultMetaData resultMeta, IDataLookup lookup)
     {
         if (resultMeta.ReturnType != ReturnType.None && resultMeta.ReturnType != ReturnType.Output)
         {
@@ -867,7 +861,7 @@ public class Generator
 
         foreach (var outputParameter in parameters.Where(x => x.IsOutput))
         {
-            sb.AppendLine($@"parameters.{outputParameter.CSharpPropertyName()} = ({outputParameter.CSharpType()}) ConvertDBNullToNull(cm.Parameters[""{outputParameter.Name}""].Value);");
+            sb.AppendLine($@"parameters.{outputParameter.CSharpPropertyName()} = ({outputParameter.CSharpType(lookup)}) ConvertDBNullToNull(cm.Parameters[""{outputParameter.Name}""].Value);");
         }
     }
 
@@ -916,9 +910,6 @@ public class Generator
             {{
                 await {procName}_Delegate(parameters, this);
             }}");
-            
-            
-            
         }
         else if (resultMeta.ReturnType != ReturnType.None)
         {
@@ -966,21 +957,21 @@ public class Generator
     }
 
 
-    private static List<OutputFile> GenerateUserDefinedTypeClasses(List<UserDefinedTableRowDefinition> userDefinedTypes, string settingsNamespace)
+    private static List<OutputFile> GenerateUserDefinedTypeClasses(List<UserDefinedTypeGrouping> userDefinedTypeGroup, string settingsNamespace, IDataLookup lookup)
     {
-        var userDefinedTypeNames = userDefinedTypes.Select(x => x.TableTypeName).Distinct().ToList();
-        var results = userDefinedTypes
-            .GroupBy(x => x.TableTypeName)
-            .Select(dt =>
-            new OutputFile(
-                $"{dt.Key}.generated.cs",
-                WrapInNamespace(
-                $@"public partial class {dt.Key} 
+
+        var results =
+            userDefinedTypeGroup
+                .Select(dt =>
+                    new OutputFile(
+                        $"{dt.GetCSharpTypeName()}.generated.cs",
+                        WrapInNamespace(
+                            $@"public partial class {dt.GetCSharpTypeName()} 
                     {{
-                        {CSharpProperties(dt, userDefinedTypeNames)}
+                        {CSharpProperties(dt.Rows, lookup: lookup)}
                     }}"
-                , settingsNamespace, false))).ToList();
-            
+                            , settingsNamespace, false))).ToList();
+
 
         return results;
     }
@@ -1000,23 +991,23 @@ public class Generator
         return sb.ToString().Trim();
     }
 
-    private static string CSharpProperties(List<ParameterDefinition> parameters, List<string> userDefinedTypeNames)
+    private static string CSharpProperties(List<ParameterDefinition> parameters, IDataLookup lookup )
     {
         var sb = new StringBuilder();
         foreach (var parameter in parameters)
         {
-            sb.AppendLine($"public {parameter.CSharpType(userDefinedTypeNames: userDefinedTypeNames)} {parameter.CSharpPropertyName()} {{ get; set; }}");
+            sb.AppendLine($"public {parameter.CSharpType(lookup: lookup)} {parameter.CSharpPropertyName()} {{ get; set; }}");
         }
 
         return sb.ToString().Trim();
     }
     
-    private static string CSharpProperties(IEnumerable<UserDefinedTableRowDefinition> dt, List<string> userDefinedTypeNames)
+    private static string CSharpProperties(IEnumerable<UserDefinedTableRowDefinition> dt, IDataLookup lookup)
     {
         var sb = new StringBuilder();
         foreach (var row in dt)
         {
-            sb.AppendLine($"public {row.CSharpType(userDefinedTypeNames: userDefinedTypeNames)} {row.CSharpPropertyName()} {{ get; set; }}");
+            sb.AppendLine($"public {row.CSharpType(lookup: lookup)} {row.CSharpPropertyName()} {{ get; set; }}");
         }
 
         return sb.ToString().Trim();

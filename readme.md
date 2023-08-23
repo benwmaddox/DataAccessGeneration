@@ -164,11 +164,16 @@ Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
 * Make sure the current user has access to the Northwind database.
 
 ### Changes
+#### 2023-08-23 (V1.25)
+* Better parameter casing.
+* Distinguished user defined table types with the same name across schemas.
+* Only including user defined table types if there were referenced in a procedure.
+
 #### 2023-06-05 (V1.24)
 * Reduced database calls when return type is None or Output.
 
 #### 2023-06-01 (V1.23)
-* Better handling of user defined table types and nullable values 
+* Better handling of user defined table types and nullable values. 
 
 #### 2023-06-01 (V1.22)
 * Corrected type used in generating interfaces for user defined table type values
