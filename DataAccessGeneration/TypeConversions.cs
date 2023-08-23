@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 
@@ -127,11 +128,11 @@ namespace DataAccessGeneration
 			}
 		}
 
-		public static string CSharpType(this ParameterDefinition p, List<string>? userDefinedTypeNames = null) => getCSharpTypeFromSQLType(p.TypeName, p.MaxLength, p.Precision, p.Scale, true, userDefinedTypeNames);
-		public static string CSharpType(this UserDefinedTableRowDefinition r, bool? isNullable = null,  List<string>? userDefinedTypeNames = null) => getCSharpTypeFromSQLType(r.TypeName, r.MaxLength, r.Precision, r.Scale, isNullable ?? r.IsNullable, userDefinedTypeNames);
-		public static string CSharpType(this ResultDefinition r, List<string>? userDefinedTypeNames = null) => getCSharpTypeFromSQLType(r.TypeName, r.MaxLength, r.Precision, r.Scale, r.IsNullable, userDefinedTypeNames);
+		public static string CSharpType(this ParameterDefinition p, IDataLookup? lookup) => getCSharpTypeFromSQLType(p.TypeSchema, p.TypeName, p.MaxLength, p.Precision, p.Scale, true, lookup);
+		public static string CSharpType(this UserDefinedTableRowDefinition r, bool? isNullable = null, IDataLookup? lookup = null) => getCSharpTypeFromSQLType(r.SchemaName, r.TypeName, r.MaxLength, r.Precision, r.Scale, isNullable ?? r.IsNullable, lookup);
+		public static string CSharpType(this ResultDefinition r, IDataLookup? lookup = null) => getCSharpTypeFromSQLType(null, r.TypeName, r.MaxLength, r.Precision, r.Scale, r.IsNullable, lookup);
 
-		public static string getCSharpTypeFromSQLType(string typeName, int? maxLength = null, byte? precision = null, byte? scale = null, bool? isNullable = true, List<string>? userDefinedTypes = null)
+		public static string getCSharpTypeFromSQLType(string? schemaName, string typeName, int? maxLength = null, byte? precision = null, byte? scale = null, bool? isNullable = true, IDataLookup? lookup = null)
 		{
 			var cSharpToSqlConversion = new Dictionary<string, string>()
 			{
@@ -176,7 +177,9 @@ namespace DataAccessGeneration
 			{
 				return cSharpToSqlConversion[typeName] + (isNullable == true ? "?" : "");
 			}
-			if (userDefinedTypes != null && userDefinedTypes.Contains(typeName)) return $"List<{typeName}>" + (isNullable == true ? "?" : "");
+			var udt = lookup?.GetUserDefinedType(schemaName ?? "", typeName) ;
+
+            if (udt != null) return $"List<{udt.GetCSharpTypeName()}>" + (isNullable == true ? "?" : "");
 
 			throw new Exception("Unknown SQL TYPE: " + typeName);
 		}
