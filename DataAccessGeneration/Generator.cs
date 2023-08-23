@@ -589,10 +589,8 @@ public class Generator
             var shortHandMethod = parameters.Count < 4
                 ? $@"{resultType} {procName}({string.Join(", ", parameters.Select(p => p.CSharpType(dataLookup) + " " + p.CSharpPropertyName().ToCamelCase()))});"
                 : "";
-
-            //var typeMatches = parameters.Count == 1 ? userDefinedTypes.Where(x => x.TableTypeName == parameters.Single().TypeName).ToList() : new List<UserDefinedTableRowDefinition>();
-            //var typeMatch = typeMatches.FirstOrDefault();
-            var typeMatch = dataLookup.GetUserDefinedType(parameters.Single().TypeSchema, parameters.Single().TypeName);
+            
+            var typeMatch = parameters.Count == 1 ? dataLookup.GetUserDefinedType(parameters.Single().TypeSchema, parameters.Single().TypeName) : null;
             var udtMethod = typeMatch != null && typeMatch.Rows.Count == 1 && parameters.Count == 1
                 ? $"{resultType} {procName}(IEnumerable<{typeMatch.Rows.Single().CSharpType(isNullable:false)}> {parameters.Single().CSharpPropertyName().ToCamelCase()});" 
                 : "";
