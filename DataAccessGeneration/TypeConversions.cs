@@ -213,6 +213,7 @@ namespace DataAccessGeneration
             string[] split = input.Split("_")
                 .Select(x => x.SplitCamelCase())
                 .SelectMany(x => x)
+                .Where(x => x.Length > 0)
                 .ToArray();
 
             split[0] = split[0].ToLower();
@@ -228,7 +229,9 @@ namespace DataAccessGeneration
 
         public static string[] SplitCamelCase(this string source)
         {
-            return Regex.Split(source, @"(?<=[a-z])(?=[A-Z])");
+            return Regex.Split(source, @"(?<=[a-z])(?=[A-Z])|(?<=[A-Z]*)(?=[A-Z][a-z]+)");
+            //(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=(?:[A-Z][a-z]){1,}(?=[A-Z][a-z]))
+            //(?<=[a-z])(?=[A-Z])|([A-Z]*)([A-Z]{1,}[a-z]*)
         }
 
         /// <summary>
