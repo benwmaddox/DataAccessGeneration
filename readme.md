@@ -164,10 +164,13 @@ Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
 * Make sure the current user has access to the Northwind database.
 
 ### Changes
+#### 2023-08-28 (V1.26)
+* Added new setting option: AllowExecution
+
 #### 2023-08-23 (V1.25)
 * Better parameter casing.
 * Distinguished user defined table types with the same name across schemas.
-* Only including user defined table types if there were referenced in a procedure.
+* Only including user defined table types if they were referenced in a procedure.
 
 #### 2023-06-05 (V1.24)
 * Reduced database calls when return type is None or Output.
@@ -307,6 +310,7 @@ Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
     * None would not return any results.
 * IncludesFakes: Bool. Include classes for testing and have the Fake prefix. They are placed in the Fake sub namespace.
 * RepositoryName: String, Optional. If not defined, the Repository name will be {schema}Repository. Otherwise it will be as defined in this property.
+* AllowExecution: Bool. If not defined, defaulted to true. If true and the procedure results can't be determined through normal means, the procedure will be executed to determine types.
 
 ## Project History
 * Originally designed for OneSky Flight LLC as an internal project. 

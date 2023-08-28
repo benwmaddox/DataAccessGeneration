@@ -10,7 +10,8 @@
         public List<ProcedureSetting> ProcedureList { get; set; } = new List<ProcedureSetting>();
         public bool IncludeFakes { get; set; } = true;
         public string? RepositoryName { get; set; } = null;
-        
+        public bool AllowExecution { get; set; } = true;
+
     }
 
 }
