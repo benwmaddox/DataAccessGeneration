@@ -71,6 +71,8 @@ END ;
 
         Assert.NotEmpty(fileManager.SavedFiles);
 
+        TestCompiler.AssertCompilesWithoutError(fileManager);
+
         ExecuteQuery(settings.ConnectionString, dropDefinitions);
 
     }
