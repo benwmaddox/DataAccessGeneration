@@ -151,7 +151,7 @@ public class Generator
 
                 public partial class {settings.RepositoryName} : I{settings.RepositoryName}
 	            {{
-                    protected bool _inTransaction = false;
+		            protected bool _inTransaction = false;
 		            private string _connectionString;
 		            public {settings.RepositoryName}(string connectionString) 
 		            {{
