@@ -1,11 +1,10 @@
 [
     {
-        "ConnectionString": "Server=.\\SQLExpress;Initial Catalog=Northwind;Integrated Security=true;Persist Security Info=True;Encrypt=False;MultipleActiveResultSets=true;Application Name=DataAccessGeneration",
+        "ConnectionString": "Server=localhost,1433;Initial Catalog=Northwind;Integrated Security=false;User Id=sa;Password=qXx)cYvSHJlRW0{e>uZJG8u;Persist Security Info=True;MultipleActiveResultSets=true;Application Name=DataAccessGeneration",
         "SchemaName": "dbo",
         "Namespace": "DataAccessGeneration.Example.Northwind",
         "OutputRelativePath": "../Repositories/Northwind",
         "IncludeFakes": true,
-        "AllowExecution": true,
         "RepositoryName": "NorthwindRepository",
         "ProcedureList": [
         ]
