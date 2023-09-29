@@ -210,24 +210,36 @@ ORDER BY rs.column_ordinal
 		var results = new List<ResultDefinition>();
 		using (SqlConnection connection = new SqlConnection(_connectionString))
 		{
-			SqlCommand cm = new SqlCommand(procedureCallingCode, connection);
-			cm.CommandTimeout = 120000;
 			connection.Open();
-
-			SqlDataReader sdr = cm.ExecuteReader();
-			for (int i = 0; i < sdr.FieldCount; i++)
-			{
-				results.Add(new ResultDefinition()
-				{
-					Name = sdr.GetName(i),
-					TypeName = sdr.GetDataTypeName(i),
-					IsNullable = sdr.GetSchemaTable().Rows[i]["AllowDBNull"] as bool? ?? false,
-					MaxLength = sdr.GetSchemaTable().Rows[i]["ColumnSize"] as short? ?? 0,
-					Precision = sdr.GetSchemaTable().Rows[i]["NumericPrecision"] as byte? ?? 0,
-					Scale = sdr.GetSchemaTable().Rows[i]["NumericScale"] as byte? ?? 0,
-				});
-			}
-		}
+            using (var transaction = connection.BeginTransaction())
+            {
+                SqlCommand cm = new SqlCommand(procedureCallingCode, connection);
+                cm.CommandTimeout = 120000;
+                cm.Transaction = transaction;
+                try
+                {
+                    SqlDataReader sdr = cm.ExecuteReader();
+                    for (int i = 0; i < sdr.FieldCount; i++)
+                    {
+                        results.Add(new ResultDefinition()
+                        {
+                            Name = sdr.GetName(i),
+                            TypeName = sdr.GetDataTypeName(i),
+                            IsNullable = sdr.GetSchemaTable().Rows[i]["AllowDBNull"] as bool? ?? false,
+                            MaxLength = sdr.GetSchemaTable().Rows[i]["ColumnSize"] as short? ?? 0,
+                            Precision = sdr.GetSchemaTable().Rows[i]["NumericPrecision"] as byte? ?? 0,
+                            Scale = sdr.GetSchemaTable().Rows[i]["NumericScale"] as byte? ?? 0,
+                        });
+                    }
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+				transaction.Rollback();
+            }
+        }
 
 		return results;
 	}

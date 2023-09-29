@@ -151,6 +151,7 @@ public class Generator
 
                 public partial class {settings.RepositoryName} : I{settings.RepositoryName}
 	            {{
+                    protected bool _inTransaction = false;
 		            private string _connectionString;
 		            public {settings.RepositoryName}(string connectionString) 
 		            {{
@@ -171,6 +172,7 @@ public class Generator
                             {{
                                 try
                                 {{
+                                    _inTransaction = true;
                                     var transactionManaged = new {settings.RepositoryName}.TransactionManaged(connection, transaction);
                                     var transactionContext = new TransactionManagedContext(transactionManaged, connection, transaction);
                                     var result = await action.Invoke(transactionContext);
@@ -186,8 +188,10 @@ public class Generator
                                 catch
                                 {{
                                     transaction.Rollback();
+                                    _inTransaction = false;
                                     throw;
                                 }}
+                                _inTransaction = false;
                             }}
                         }}
                     }}
@@ -700,6 +704,15 @@ public class Generator
         }
 
         {
+            if (includeConnectionCreation)
+            {
+                sb.AppendLine(
+                    $@"if (_inTransaction) 
+                    {{ 
+                        throw new Exception(""Currently in a transaction. This requires accessing methods from the context repository instance within the RunTransaction call.""
+                        + "" Please do not use the repository instance defined outside of RunTransaction."");
+                    }}");
+            }
 
             if (resultMetaData.ReturnType != ReturnType.None)
             {
