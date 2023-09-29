@@ -1,15 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
-using Xunit;
 
 namespace DataAccessGeneration.XUnitTest;
 
@@ -108,6 +101,7 @@ public class CompileTests
         returnList.Add( MetadataReference.CreateFromFile(Path.Combine(assemblyPath, "System.dll")));
         returnList.Add( MetadataReference.CreateFromFile(Path.Combine(assemblyPath, "System.Core.dll")));
         returnList.Add( MetadataReference.CreateFromFile(Path.Combine(assemblyPath, "System.Runtime.dll")));
+        returnList.Add( MetadataReference.CreateFromFile(Path.Combine(assemblyPath, "System.Collections.dll")));
         returnList.Add( MetadataReference.CreateFromFile(typeof(Microsoft.Data.SqlClient.SqlConnection).Assembly.Location));
         returnList.Add( MetadataReference.CreateFromFile(typeof(System.Data.Common.DbConnection).Assembly.Location));
         returnList.Add( MetadataReference.CreateFromFile(typeof(object).Assembly.Location));

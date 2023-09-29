@@ -177,24 +177,32 @@ ORDER BY rs.column_ordinal
 		}
 
 		// If can't use normal means to load the result set, try to get it from the procedure call. But it depends on knowing all the parameter default values
-		if (!results.Any() && executeDuringGeneration)
-		{
-			if (parameters.All(x => x.DatabaseDefaultValue() != null))
-			{
-				try
-				{
-					results = GetResultDefinitionForProcedureExecution($@"EXEC {schemaName}.{procedureName} {string.Join(", ", parameters.Select(p =>
-						$"{p.Name} = {p.DatabaseDefaultValue()}"
-					))}");
-				}
-				catch
-				{
-					// Not a huge deal since this was a fallback attempt
-				}
-			}
-		}
+        if (!results.Any() && executeDuringGeneration)
+        {
+            try
+            {
+				// User defined types have to be declares prior to the query execution
+                var query =
+                    string.Join(" ",
+                        parameters.Where(x => x.DatabaseDefaultValue() == null).Select(p => $"DECLARE {p.Name} {p.TypeSchema}.{p.TypeName};"
+                        )) +
+                    $@" EXEC {schemaName}.{procedureName} {string.Join(", ", parameters.Select(p =>
+                        p.DatabaseDefaultValue() != null ?
+							// Default value for known types
+                            $"{p.Name} = {p.DatabaseDefaultValue()}"
+							// Using the UDT variable names
+                            : $"{p.Name} = {p.Name}"
+                    ))}";
+                results = GetResultDefinitionForProcedureExecution(query);
+            }
+            catch
+            {
+                // Not a huge deal since this was a fallback attempt
+            }
 
-		return results;
+        }
+
+        return results;
 	}
 
 	public List<ResultDefinition> GetResultDefinitionForProcedureExecution(string procedureCallingCode)
