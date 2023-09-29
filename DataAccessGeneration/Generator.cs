@@ -137,7 +137,7 @@ public class Generator
 
                 public class TransactionManagedContext
                 {{                        
-                    public TransactionManagedContext(I{settings.RepositoryName} repository, SqlConnection connection, SqlTransaction transaction)
+                    public TransactionManagedContext(I{settings.RepositoryName} repository, SqlConnection? connection, SqlTransaction? transaction)
                     {{
                         Repository = repository;
                         Connection = connection;
@@ -145,8 +145,8 @@ public class Generator
                     }}
 
                     public I{settings.RepositoryName} Repository {{ get; set; }}
-                    public SqlConnection Connection {{ get; set; }}
-                    public SqlTransaction Transaction {{ get; set; }}
+                    public SqlConnection? Connection {{ get; set; }}
+                    public SqlTransaction? Transaction {{ get; set; }}
                 }}
 
                 public partial class {settings.RepositoryName} : I{settings.RepositoryName}
@@ -237,15 +237,9 @@ public class Generator
 
                     public async Task RunTransaction(Func<TransactionManagedContext, Task<TransactionResult>> action)
                     {{
-                        // Can't easily make a transaction for fakes. So just running from this class
-                        using (var connection = new SqlConnection())
-                        {{
-                            using (var transaction = connection.BeginTransaction())
-                            {{
-                                var context = new TransactionManagedContext(this, connection, transaction); 
-                                await action.Invoke(context);
-                            }}
-                        }}
+                        // In memory fakes can't have connections so nulls are used here instead                        
+                        var context = new TransactionManagedContext(this, null, null); 
+                        await action.Invoke(context);                        
                     }}
 
 	            }}", settings.Namespace + ".Fake", true, settings.Namespace)

@@ -61,6 +61,7 @@ var result = parameters.RecordCount;
 ```csharp
 await _repo.RunTransaction(async (context) =>
 {
+    // It is important to use the repository on the context. Not the _repo in this example.
     var insertResult = await context.Repository.CustOrder_Insert(new CustOrder_Insert_Parameters()
     {
       ProductName = "125-800",
@@ -79,6 +80,7 @@ await _repo.RunTransaction(async (context) =>
 ```csharp
 await _repo.RunTransaction(async (context) =>
 {    
+    // It is important to use the repository on the context. Not the _repo in this example.
     var insertResult = await context.Repository.CustOrder_Insert(new CustOrder_Insert_Parameters()
     {
         ProductName = "125-800",
@@ -157,6 +159,69 @@ Assert.Equal("Beverages", data.First().ProductName);
 Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
 ```
 
+
+## Building
+
+* Make sure .NET 6 is installed
+* Run publish.bat to create a small set of output files
+* There should be no more than 4 files with this approach. Supports Windows 64 bit
+* [root]\DataAccessGeneration\bin\Release\net6.0\win-x64\publish
+* Other build targets will require updating the publish.bat file
+
+## Using
+
+* There are two approaches to using this tool
+* Option 1: Directly use the EXE in your project
+  * Take the published files and copy into the project structure where it will be used
+  * Edit the json file with specific procedures you desire and adjust other settings
+  * Run the EXE from windows explorer. It should create the desired files
+* Option 2: Use the BAT or PS1 file to call Data Access Generator from a shared location
+  * Copy the published json file to a folder on your machine. Edit the json file with specific procedures you desire and adjust other settings  
+  * Make sure the BAT or PS1 file points to the shared location of the EXE and that it points to the json settings file.
+  * Run the BAT or PS1 file from the command line or run the BAT file from windows explorer. It should create the desired files. PS1 files can not be run directly by double clicking.
+  * If pinning to a specific version is required, use the version path instead of latest path in the BAT or PS1 file.
+* Option 2 is recommended as it allows the EXE to be updated in a shared location and have all projects use the latest version. It will also prevent commiting EXE files into source control.
+
+## Known Limitations
+
+* Does not support multiple result sets
+* Parameter properties will always be marked as nullable even if they should be required. SQL Server does not provide this information.
+* If a procedure is complex enough, the result properties may not always be determinable. It attempts two approaches to get the data. The second requires calling the procedure with stub parameters
+* Calculating result definitions may not work for procedures with temp tables. It attempts to call the procedure with stub parameters which sometimes works.
+
+## Settings
+
+* ConnectionString: String. The connection string to the database. This should be accessible to the user running the program. The Database portion will be used.
+* SchemaName: String. The DB schema to use in addition to the database defined in the connection string. Only 1 schema per setting is supported.
+* Namespace: String. This namespace will be used as the base for all generated classes. Fake classes will be in a sub namespace.
+* OutputRelativePath: String. The path to the output directory relative to the DataAccessGeneration executable
+* ProcedureList: Array of objects. List of procedures to generate. If left null or empty, all procedures will be generated for that schema.
+  * Proc - Required - Name in database.
+  * Name - Optional - Name to use in C#. Defaults to use the Proc value.
+  * Return - Enum Optional - Could be List, Single, Scalar, Output, None. Defaults to List.
+    * List is a list of results.
+    * Single would be a Single() style result for a single row. Expect exceptions if there isn't a single result.
+    * SingleOrDefault would be a SingleOrDefault() style result for a single row. No results will return a null.
+    * Scalar would be a single value and would only work if there is just a single column & single row result.
+    * Output would take all output parameters and assign them to a new return type and return that as a single item.
+    * None would not return any results.
+* IncludesFakes: Bool. Include classes for testing and have the Fake prefix. They are placed in the Fake sub namespace.
+* RepositoryName: String, Optional. If not defined, the Repository name will be {schema}Repository. Otherwise it will be as defined in this property.
+* AllowExecution: Bool. If not defined, defaulted to true. If true and the procedure results can't be determined through normal means, the procedure will be executed to determine types.
+
+## Project History
+* Originally designed for OneSky Flight LLC as an internal project. 
+* Used in production in a limited fashion in 2021 and more widely used in many internal projects in 2022.
+* Transitioned to an open source project with permission in 2022.
+
+## Project decisions and reasoning
+* An executable instead of nuget package. Maintainable and easy to get running for most developers.
+* Run manually instead of on build. Better control and didn't want to need CI systems to access the database.
+* Using nullable reference types. More accurate information with null types.
+* Fake creation. If used, generated fakes cover about 80% of our test use cases with just returning a defined set of data on a proc call. This makes that case very easy to use. Delegates can be made to cover most other cases with more effort.
+* .NET 6. Current .NET version at the time of development. Intent is to keep project in a current .NET version and output code compatible with oldest version of .NET that Microsoft actively supports. (see https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core)
+
+
 ### Integration Tests
 * Uses SQL Server 2019 Express Edition for local testing purposes.
 * Install SQL Server 2019 Express Edition
@@ -164,6 +229,10 @@ Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
 * Make sure the current user has access to the Northwind database.
 
 ### Changes
+#### 2023-09-29 (V1.27)
+* Updated procedure execution so it can find results when: fallback option is used because of temp tables and user defined table types are used as parameters.
+* Fakes for run transaction will work now
+
 #### 2023-08-28 (V1.26)
 * Added new setting option: AllowExecution
 
@@ -262,67 +331,3 @@ Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
 * Changed from System.Data.SqlClient to Microsoft.Data.SqlClient
 * This may require adding Encrypt=false to the connection string since the default changes with this library.
 * Breaking change: Switch the nuget package from System.Data.SqlClient to Microsoft.Data.SqlClient 
-
-## Building
-
-* Make sure .NET 6 is installed
-* Run publish.bat to create a small set of output files
-* There should be no more than 4 files with this approach. Supports Windows 64 bit
-* [root]\DataAccessGeneration\bin\Release\net6.0\win-x64\publish
-* Other build targets will require updating the publish.bat file
-
-## Using
-
-* There are two approaches to using this tool
-* Option 1: Directly use the EXE in your project
-  * Take the published files and copy into the project structure where it will be used
-  * Edit the json file with specific procedures you desire and adjust other settings
-  * Run the EXE from windows explorer. It should create the desired files
-* Option 2: Use the BAT or PS1 file to call Data Access Generator from a shared location
-  * Copy the published json file to a folder on your machine. Edit the json file with specific procedures you desire and adjust other settings  
-  * Make sure the BAT or PS1 file points to the shared location of the EXE and that it points to the json settings file.
-  * Run the BAT or PS1 file from the command line or run the BAT file from windows explorer. It should create the desired files. PS1 files can not be run directly by double clicking.
-  * If pinning to a specific version is required, use the version path instead of latest path in the BAT or PS1 file.
-* Option 2 is recommended as it allows the EXE to be updated in a shared location and have all projects use the latest version. It will also prevent commiting EXE files into source control.
-
-## Known Limitations
-
-* Does not support multiple result sets
-* Parameter properties will always be marked as nullable even if they should be required. SQL Server does not provide this information.
-* If a procedure is complex enough, the result properties may not always be determinable. It attempts two approaches to get the data. The second requires calling the procedure with stub parameters
-* Calculating result definitions may not work for procedures with temp tables. It attempts to call the procedure with stub parameters which sometimes works.
-
-## Settings
-
-* ConnectionString: String. The connection string to the database. This should be accessible to the user running the program. The Database portion will be used.
-* SchemaName: String. The DB schema to use in addition to the database defined in the connection string. Only 1 schema per setting is supported.
-* Namespace: String. This namespace will be used as the base for all generated classes. Fake classes will be in a sub namespace.
-* OutputRelativePath: String. The path to the output directory relative to the DataAccessGeneration executable
-* ProcedureList: Array of objects. List of procedures to generate. If left null or empty, all procedures will be generated for that schema.
-  * Proc - Required - Name in database.
-  * Name - Optional - Name to use in C#. Defaults to use the Proc value.
-  * Return - Enum Optional - Could be List, Single, Scalar, Output, None. Defaults to List.
-    * List is a list of results.
-    * Single would be a Single() style result for a single row. Expect exceptions if there isn't a single result.
-    * SingleOrDefault would be a SingleOrDefault() style result for a single row. No results will return a null.
-    * Scalar would be a single value and would only work if there is just a single column & single row result.
-    * Output would take all output parameters and assign them to a new return type and return that as a single item.
-    * None would not return any results.
-* IncludesFakes: Bool. Include classes for testing and have the Fake prefix. They are placed in the Fake sub namespace.
-* RepositoryName: String, Optional. If not defined, the Repository name will be {schema}Repository. Otherwise it will be as defined in this property.
-* AllowExecution: Bool. If not defined, defaulted to true. If true and the procedure results can't be determined through normal means, the procedure will be executed to determine types.
-
-## Project History
-* Originally designed for OneSky Flight LLC as an internal project. 
-* Used in production in a limited fashion in 2021 and more widely used in many internal projects in 2022.
-* Transitioned to an open source project with permission in 2022.
-
-## Project decisions and reasoning
-* An executable instead of nuget package. Maintainable and easy to get running for most developers.
-* Run manually instead of on build. Better control and didn't want to need CI systems to access the database.
-* Using nullable reference types. More accurate information with null types.
-* Fake creation. If used, generated fakes cover about 80% of our test use cases with just returning a defined set of data on a proc call. This makes that case very easy to use. Delegates can be made to cover most other cases with more effort.
-* .NET 6. Current .NET version at the time of development. Intent is to keep project in a current .NET version and output code compatible with oldest version of .NET that Microsoft actively supports. (see https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core)
-
-
-
