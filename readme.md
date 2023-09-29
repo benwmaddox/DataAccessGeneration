@@ -229,7 +229,7 @@ Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
 * Make sure the current user has access to the Northwind database.
 
 ### Changes
-#### 2023-09-28 (V1.27)
+#### 2023-09-29 (V1.27)
 * Updated procedure execution so it can find results when: fallback option is used because of temp tables and user defined table types are used as parameters.
 * Fakes for run transaction will work now
 

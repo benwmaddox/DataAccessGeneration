@@ -7,7 +7,7 @@ namespace DataAccessGeneration
 {
     public partial class Program
     {
-        public const string VERSION = "2023-09-28 V1.27";
+        public const string VERSION = "2023-09-29 V1.27";
 
         public static void Main(string[] args)
         {
