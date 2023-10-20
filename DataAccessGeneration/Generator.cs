@@ -235,18 +235,45 @@ public class Generator
                     $@"public partial class Fake{settings.RepositoryName} : I{settings.RepositoryName} 
 	            {{
 		            
+		            protected bool _inTransaction = false;
 		            public Fake{settings.RepositoryName}() 
 		            {{
 		            }}
 
                     public async Task RunTransaction(Func<TransactionManagedContext, Task<TransactionResult>> action)
                     {{
-                        // In memory fakes can't have connections so nulls are used here instead                        
-                        var context = new TransactionManagedContext(this, null, null); 
-                        await action.Invoke(context);                        
+                        _inTransaction = true;
+                        try
+                        {{
+                            var repository = new TransactionManaged(this);
+                            // In memory fakes can't have connections so nulls are used here instead       
+                            var context = new TransactionManagedContext(repository, null, null); 
+                            await action.Invoke(context);                        
+                        }}
+                        catch
+                        {{
+                            _inTransaction = false;
+                            throw;
+                        }}
+
+                        _inTransaction = false;
                     }}
 
-	            }}", settings.Namespace + ".Fake", true, settings.Namespace)
+                    public partial class TransactionManaged : I{settings.RepositoryName} 
+	                {{		                
+                        private Fake{settings.RepositoryName} _fakeInstance;
+                        public TransactionManaged(Fake{settings.RepositoryName} fakeInstance)
+                        {{
+                            _fakeInstance = fakeInstance;
+                        }}
+
+                        public async Task RunTransaction(Func<TransactionManagedContext, Task<TransactionResult>> action)
+                        {{
+                            throw new NotImplementedException(""Currently in a transaction managed context. Can't run nested RunTransaction methods."");
+                        }}
+	                }}
+                }}
+", settings.Namespace + ".Fake", true, settings.Namespace)
             )
         };
     }
@@ -573,6 +600,20 @@ public class Generator
             {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
         }}");
 
+
+        sb.AppendLine($@"
+        public partial class Fake{settings.RepositoryName} : I{settings.RepositoryName}
+        {{
+
+            public partial class TransactionManaged :  I{settings.RepositoryName}
+            {{
+                { AddBaseFakeProcedureCallingMethod(procedureSetting, parameters, methodReturnType, settings, resultMetaData)}
+                { AddShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
+                { AddUDTShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
+            }}
+        }}
+        ");
+
         return new OutputFile($"Fake/{procedureSetting.GetName()}.generated.cs",
                 WrapInNamespace(sb.ToString(), settings.Namespace + ".Fake", false, settings.Namespace)
             );
@@ -710,7 +751,7 @@ public class Generator
                     $@"if (_inTransaction) 
                     {{ 
                         throw new Exception(""Currently in a transaction. This requires accessing methods from the context repository instance within the RunTransaction call.""
-                        + "" Please do not use the repository instance defined outside of RunTransaction."");
+                        + "" Please do not use the repository instance defined outside of RunTransaction. Example: If you're using _repository, change it to context.Repository."");
                     }}");
             }
 
@@ -886,6 +927,11 @@ public class Generator
 
             public async {methodReturnType} {procName}({procName}_Parameters parameters)
             {{
+                if (_inTransaction) 
+                {{ 
+                    throw new Exception(""Currently in a transaction. This requires accessing methods from the context repository instance within the RunTransaction call.""
+                    + "" Please do not use the repository instance defined outside of RunTransaction. Example: If you're using _repository, change it to context.Repository."");
+                }}
                 return await {procName}_Delegate(parameters, this);            
             }}");
 
@@ -915,6 +961,11 @@ public class Generator
 
             public async {methodReturnType} {procName}({procName}_Parameters parameters)
             {{
+                if (_inTransaction) 
+                {{ 
+                    throw new Exception(""Currently in a transaction. This requires accessing methods from the context repository instance within the RunTransaction call.""
+                    + "" Please do not use the repository instance defined outside of RunTransaction. Example: If you're using _repository, change it to context.Repository."");
+                }}
                 await {procName}_Delegate(parameters, this);
             }}");
         }
@@ -925,6 +976,11 @@ public class Generator
 
             public async {methodReturnType} {procName}()
             {{
+                if (_inTransaction) 
+                {{ 
+                    throw new Exception(""Currently in a transaction. This requires accessing methods from the context repository instance within the RunTransaction call.""
+                    + "" Please do not use the repository instance defined outside of RunTransaction. Example: If you're using _repository, change it to context.Repository."");
+                }}
                 return await {procName}_Delegate(this);
             }}");
 
@@ -955,7 +1011,58 @@ public class Generator
             sb.AppendLine($"public async {methodReturnType} {procName}()");
             sb.AppendLine($"{{");
             {
+
+                sb.AppendLine($@"
+                if (_inTransaction) 
+                {{ 
+                    throw new Exception(""Currently in a transaction. This requires accessing methods from the context repository instance within the RunTransaction call.""
+                    + "" Please do not use the repository instance defined outside of RunTransaction. Example: If you're using _repository, change it to context.Repository."");
+                }}");
                 sb.AppendLine($"await {procName}_Delegate(this);");
+            }
+            sb.AppendLine($"}}");
+        }
+
+        return sb.ToString();
+    }
+
+
+    private static string AddBaseFakeProcedureCallingMethod(ProcedureSetting procedureSetting, List<ParameterDefinition> parameters, string methodReturnType, Settings settings, ResultMetaData resultMeta)
+    {
+        StringBuilder sb = new StringBuilder();
+        var resultSetList = resultMeta.ReturnTypeCSharpString;
+        var procName = procedureSetting.GetName();
+        if (resultMeta.ReturnType != ReturnType.None && parameters.Any())
+        {
+            sb.AppendLine($@"
+            public async {methodReturnType} {procName}({procName}_Parameters parameters)
+            {{
+                return await _fakeInstance.{procName}_Delegate(parameters, _fakeInstance);            
+            }}");
+        }
+        else if (parameters.Any())
+        {
+            sb.AppendLine($@"
+            public async {methodReturnType} {procName}({procName}_Parameters parameters)
+            {{
+                await  _fakeInstance.{procName}_Delegate(parameters, _fakeInstance);
+            }}");
+        }
+        else if (resultMeta.ReturnType != ReturnType.None)
+        {
+            sb.AppendLine($@"
+            public async {methodReturnType} {procName}()
+            {{
+                return await  _fakeInstance.{procName}_Delegate(_fakeInstance);
+            }}");
+        }
+        else
+        {
+            sb.AppendLine();
+            sb.AppendLine($"public async {methodReturnType} {procName}()");
+            sb.AppendLine($"{{");
+            {
+                sb.AppendLine($"await  _fakeInstance.{procName}_Delegate(_fakeInstance);");
             }
             sb.AppendLine($"}}");
         }
