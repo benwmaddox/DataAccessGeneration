@@ -231,6 +231,7 @@ Assert.Equal(1, dictionary["SalesByCategoryDelegate"]);
 ### Changes
 #### 2023-10-20 (V1.28)
 * Breaking change: throwing runtime error on an instance when a transaction is in progress but the transaction isn't being used.
+* Corrected SqlDataReader use when looking up data
 
 #### 2023-09-29 (V1.27)
 * Updated procedure execution so it can find results when: fallback option is used because of temp tables and user defined table types are used as parameters.

@@ -1,4 +1,5 @@
-﻿using System.Data.SqlClient;
+﻿using System.Data;
+using System.Data.SqlClient;
 using System.Text.RegularExpressions;
 
 namespace DataAccessGeneration;
@@ -27,10 +28,12 @@ WHERE s.name = '{schemaName}'", connection);
             // Opening Connection  
             connection.Open();
             // Executing the SQL query  
-            SqlDataReader sdr = cm.ExecuteReader();
-            while (sdr.Read())
+            using (SqlDataReader sdr = cm.ExecuteReader())
             {
-                results.Add((string)sdr["name"]);
+                while (sdr.Read())
+                {
+                    results.Add((string)sdr["name"]);
+                }
             }
 
         }
@@ -53,10 +56,12 @@ WHERE OBJECT_ID =  OBJECT_ID('{schemaName}.{procedureName}')
             // Opening Connection  
             connection.Open();
             // Executing the SQL query  
-            SqlDataReader sdr = cm.ExecuteReader();
-            while (sdr.Read())
+            using (SqlDataReader sdr = cm.ExecuteReader())
             {
-                results.Add((string)sdr["definition"]);
+                while (sdr.Read())
+                {
+                    results.Add((string)sdr["definition"]);
+                }
             }
 
         }
@@ -84,19 +89,21 @@ ORDER BY p.parameter_id
 
             cm.CommandTimeout = 120000;
             connection.Open();
-            SqlDataReader sdr = cm.ExecuteReader();
-            while (sdr.Read())
+            using (SqlDataReader sdr = cm.ExecuteReader())
             {
-                results.Add(new ParameterDefinition()
+                while (sdr.Read())
                 {
-                    Name = (string)sdr["ParameterName"],
-                    TypeName = (string)sdr["TypeName"],
-                    TypeSchema = (string)sdr["TypeSchema"],
-                    MaxLength = (int)sdr["max_length"],
-                    Precision = (byte)sdr["precision"],
-                    Scale = (byte)sdr["scale"],
-                    IsOutput = (bool)sdr["is_output"]
-                });
+                    results.Add(new ParameterDefinition()
+                    {
+                        Name = (string)sdr["ParameterName"],
+                        TypeName = (string)sdr["TypeName"],
+                        TypeSchema = (string)sdr["TypeSchema"],
+                        MaxLength = (int)sdr["max_length"],
+                        Precision = (byte)sdr["precision"],
+                        Scale = (byte)sdr["scale"],
+                        IsOutput = (bool)sdr["is_output"]
+                    });
+                }
             }
         }
 
@@ -161,18 +168,20 @@ ORDER BY rs.column_ordinal
             cm.CommandTimeout = 120000;
             connection.Open();
 
-            SqlDataReader sdr = cm.ExecuteReader();
-            while (sdr.Read())
+            using (SqlDataReader sdr = cm.ExecuteReader())
             {
-                results.Add(new ResultDefinition()
+                while (sdr.Read())
                 {
-                    Name = (string)sdr["name"],
-                    TypeName = (string)sdr["typeName"],
-                    IsNullable = (bool)sdr["is_nullable"],
-                    MaxLength = (short)sdr["max_length"],
-                    Precision = (byte)sdr["precision"],
-                    Scale = (byte)sdr["scale"],
-                });
+                    results.Add(new ResultDefinition()
+                    {
+                        Name = (string)sdr["name"],
+                        TypeName = (string)sdr["typeName"],
+                        IsNullable = (bool)sdr["is_nullable"],
+                        MaxLength = (short)sdr["max_length"],
+                        Precision = (byte)sdr["precision"],
+                        Scale = (byte)sdr["scale"],
+                    });
+                }
             }
         }
 
@@ -218,18 +227,20 @@ ORDER BY rs.column_ordinal
                 cm.Transaction = transaction;
                 try
                 {
-                    SqlDataReader sdr = cm.ExecuteReader();
-                    for (int i = 0; i < sdr.FieldCount; i++)
+                    using (SqlDataReader sdr = cm.ExecuteReader())
                     {
-                        results.Add(new ResultDefinition()
+                        for (int i = 0; i < sdr.FieldCount; i++)
                         {
-                            Name = sdr.GetName(i),
-                            TypeName = sdr.GetDataTypeName(i),
-                            IsNullable = sdr.GetSchemaTable().Rows[i]["AllowDBNull"] as bool? ?? false,
-                            MaxLength = sdr.GetSchemaTable().Rows[i]["ColumnSize"] as short? ?? 0,
-                            Precision = sdr.GetSchemaTable().Rows[i]["NumericPrecision"] as byte? ?? 0,
-                            Scale = sdr.GetSchemaTable().Rows[i]["NumericScale"] as byte? ?? 0,
-                        });
+                            results.Add(new ResultDefinition()
+                            {
+                                Name = sdr.GetName(i),
+                                TypeName = sdr.GetDataTypeName(i),
+                                IsNullable = sdr.GetSchemaTable().Rows[i]["AllowDBNull"] as bool? ?? false,
+                                MaxLength = sdr.GetSchemaTable().Rows[i]["ColumnSize"] as short? ?? 0,
+                                Precision = sdr.GetSchemaTable().Rows[i]["NumericPrecision"] as byte? ?? 0,
+                                Scale = sdr.GetSchemaTable().Rows[i]["NumericScale"] as byte? ?? 0,
+                            });
+                        }
                     }
                 }
                 catch
@@ -272,10 +283,12 @@ FROM sys.dm_exec_describe_first_result_set('{schemaName}.{procedureName}', NULL,
             cm.CommandTimeout = 120000;
             connection.Open();
 
-            SqlDataReader sdr = cm.ExecuteReader();
-            while (sdr.Read())
+            using (SqlDataReader sdr = cm.ExecuteReader())
             {
-                results.Add((string?)ConvertDBNullToNull(sdr["error_message"]));
+                while (sdr.Read())
+                {
+                    results.Add((string?)ConvertDBNullToNull(sdr["error_message"]));
+                }
             }
         }
 
@@ -303,20 +316,22 @@ ORDER BY s.name, c.column_id
             cm.CommandTimeout = 120000;
             connection.Open();
 
-            SqlDataReader sdr = cm.ExecuteReader();
-            while (sdr.Read())
+            using (SqlDataReader sdr = cm.ExecuteReader())
             {
-                results.Add(new UserDefinedTableRowDefinition()
+                while (sdr.Read())
                 {
-                    TableTypeName = (string)sdr["TableTypeName"],
-                    SchemaName = (string)sdr["SchemaName"],
-                    ColumnName = (string)sdr["ColumnName"],
-                    TypeName = (string)sdr["TypeName"],
-                    IsNullable = (bool)sdr["is_nullable"],
-                    MaxLength = (short)sdr["max_length"],
-                    Precision = (byte)sdr["precision"],
-                    Scale = (byte)sdr["scale"],
-                });
+                    results.Add(new UserDefinedTableRowDefinition()
+                    {
+                        TableTypeName = (string)sdr["TableTypeName"],
+                        SchemaName = (string)sdr["SchemaName"],
+                        ColumnName = (string)sdr["ColumnName"],
+                        TypeName = (string)sdr["TypeName"],
+                        IsNullable = (bool)sdr["is_nullable"],
+                        MaxLength = (short)sdr["max_length"],
+                        Precision = (byte)sdr["precision"],
+                        Scale = (byte)sdr["scale"],
+                    });
+                }
             }
         }
 
@@ -351,18 +366,20 @@ AND name <> 'sysname'
             cm.CommandTimeout = 120000;
             connection.Open();
 
-            SqlDataReader sdr = cm.ExecuteReader();
-            while (sdr.Read())
+            using (SqlDataReader sdr = cm.ExecuteReader())
             {
-                results.Add(new ResultDefinition()
+                while (sdr.Read())
                 {
-                    Name = (string)sdr["name"],
-                    TypeName = (string)sdr["typeName"],
-                    IsNullable = (bool)sdr["is_nullable"],
-                    MaxLength = (short)sdr["max_length"],
-                    Precision = (byte)sdr["precision"],
-                    Scale = (byte)sdr["scale"],
-                });
+                    results.Add(new ResultDefinition()
+                    {
+                        Name = (string)sdr["name"],
+                        TypeName = (string)sdr["typeName"],
+                        IsNullable = (bool)sdr["is_nullable"],
+                        MaxLength = (short)sdr["max_length"],
+                        Precision = (byte)sdr["precision"],
+                        Scale = (byte)sdr["scale"],
+                    });
+                }
             }
         }
 
