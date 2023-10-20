@@ -269,7 +269,7 @@ public class Generator
 
                         public async Task RunTransaction(Func<TransactionManagedContext, Task<TransactionResult>> action)
                         {{
-                            throw new NotImplementedException(""Currently in a transaction managed context. Can't run nested RunTransaction methods."");
+                            await Task.Run(() => throw new NotImplementedException(""Currently in a transaction managed context. Can't run nested RunTransaction methods.""));
                         }}
 	                }}
                 }}
