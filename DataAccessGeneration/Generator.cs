@@ -182,7 +182,7 @@ public class Generator
                                     }}
                                     else 
                                     {{
-                                         transaction.Commit();
+                                        transaction.Commit();
                                     }}
                                 }}
                                 catch
