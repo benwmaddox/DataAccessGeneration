@@ -198,7 +198,7 @@ ORDER BY rs.column_ordinal
                     $@" EXEC {schemaName}.{procedureName} {string.Join(", ", parameters.Select(p =>
                         p.DatabaseDefaultValue() != null ?
                             // Default value for known types
-                            $"{p.Name} = {p.DatabaseDefaultValue()}"
+                            $"{p.Name} = {p.DefaultValue ?? p.DatabaseDefaultValue()}"
                             // Using the UDT variable names
                             : $"{p.Name} = {p.Name}"
                     ))}";
