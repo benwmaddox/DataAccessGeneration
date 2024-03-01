@@ -148,14 +148,15 @@ public class Generator
                     public SqlConnection? Connection {{ get; set; }}
                     public SqlTransaction? Transaction {{ get; set; }}
                 }}
-
+                private readonly IMapper _mapper;
                 public partial class {settings.RepositoryName} : I{settings.RepositoryName}
 	            {{
 		            protected bool _inTransaction = false;
 		            private string _connectionString;
-		            public {settings.RepositoryName}(string connectionString) 
+		            public {settings.RepositoryName}(string connectionString, IMapper mapper) 
 		            {{
 			            _connectionString = connectionString;
+                        _mapper = mapper;
 		            }}
 		            
 		            private object? ConvertDBNullToNull(object item)
@@ -291,6 +292,7 @@ public class Generator
         if (content.Contains("CommandType")) namespaces.Add("System.Data.SqlTypes");
         if (content.Contains("Task<") || content.Contains("Task ")) namespaces.Add("System.Threading.Tasks");
         if (content.Contains(".Single(") || content.Contains(".SingleOrDefault(") || content.Contains(".Select(")) namespaces.Add("System.Linq");
+        namespaces.Add("AutoMapper");
 
 
         return $@"#nullable enable{string.Join("", namespaces.OrderBy(x => x).Select(x => $"\nusing {x};"))}
@@ -416,8 +418,10 @@ public class Generator
             $@"
             public partial class {settings.RepositoryName} : I{settings.RepositoryName}
             {{
-                {AddProcedureCallingMethod(procedureSetting, parameters,  methodReturnType, settings, resultMetaData, lookup)}
-                {AddShorthandMethod(procedureSetting.GetName(), parameters,methodReturnType, resultMetaData, lookup)}
+                {AddProcedureCallingMethod(procedureSetting, parameters, methodReturnType, settings, resultMetaData, lookup)}
+                {AddProcedureCallingMethodGeneric(procedureSetting, parameters, methodReturnType, settings, resultMetaData, lookup)}
+                {AddShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
+                {AddShorthandMethodGeneric(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
                 {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
             }}
         ");
@@ -457,7 +461,9 @@ public class Generator
             public partial class TransactionManaged :  I{settings.RepositoryName}
             {{
                 {AddProcedureCallingMethod(procedureSetting, parameters, methodReturnType, settings, resultMetaData, lookup, false)}
-                {AddShorthandMethod(procedureSetting.GetName(), parameters,  methodReturnType, resultMetaData, lookup)}
+                {AddProcedureCallingMethodGeneric(procedureSetting, parameters, methodReturnType, settings, resultMetaData, lookup, false)}
+                {AddShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
+                {AddShorthandMethodGeneric(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
                 {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
             }}
         }}");
@@ -597,6 +603,7 @@ public class Generator
         {{
             {AddFakeProcedureCallingMethod(procedureSetting, parameters, methodReturnType, settings, resultMetaData)}
             {AddShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
+            {AddShorthandMethodGeneric(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
             {AddUDTShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
         }}");
 
@@ -609,6 +616,7 @@ public class Generator
             {{
                 { AddBaseFakeProcedureCallingMethod(procedureSetting, parameters, methodReturnType, settings, resultMetaData)}
                 { AddShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
+                {AddShorthandMethodGeneric(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
                 { AddUDTShorthandMethod(procedureSetting.GetName(), parameters, methodReturnType, resultMetaData, lookup)}
             }}
         }}
@@ -628,7 +636,10 @@ public class Generator
             var shortHandMethod = parameters.Count < 4
                 ? $@"{resultType} {procName}({string.Join(", ", parameters.Select(p => p.CSharpType(dataLookup) + " " + p.CSharpPropertyName().ToParameterCase()))});"
                 : "";
-            
+            var shortHandMethodGeneric = parameters.Count < 4
+               ? $@"{resultType} {procName}({string.Join(", ", parameters.Select(p => p.CSharpType(dataLookup) + " " + p.CSharpPropertyName().ToParameterCase()))});"
+               : "";
+
             var typeMatch = parameters.Count == 1 ? dataLookup.GetUserDefinedType(parameters.Single().TypeSchema, parameters.Single().TypeName) : null;
             var udtMethod = typeMatch != null && typeMatch.Rows.Count == 1 && parameters.Count == 1
                 ? $"{resultType} {procName}(IEnumerable<{typeMatch.Rows.Single().CSharpType(isNullable:false)}> {parameters.Single().CSharpPropertyName().ToParameterCase()});" 
@@ -638,7 +649,9 @@ public class Generator
             public partial interface I{repoName}
             {{
                 {resultType} {procName}({procName}_Parameters parameters);
+                Task<T>{procName}({procName}_Parameters parameters);
                 {shortHandMethod}
+                {shortHandMethodGeneric}
                 {udtMethod}
             }}");
         }
@@ -691,6 +704,30 @@ public class Generator
 
             return $@"
                 public async {methodReturnType} {procName}({parameterList})
+                {{
+                    var parameters = new {procName}_Parameters()
+	                {{
+		                {propertyAssignmentList}
+	                }};
+                    {returnLine}
+                }}
+";
+        }
+
+        return "";
+    }
+    private static string AddShorthandMethodGeneric(string procName, List<ParameterDefinition> parameters, string methodReturnType, ResultMetaData resultMetaData, IDataLookup lookup)
+    {
+        if (parameters.Any() && parameters.Count < 4)
+        {
+            var parameterList = string.Join(", ", parameters.Select(p => p.CSharpType(lookup) + " " + p.CSharpPropertyName().ToParameterCase()));
+            var propertyAssignmentList = string.Join("," + Environment.NewLine, parameters.Select(p => p.CSharpPropertyName() + " = " + p.CSharpPropertyName().ToParameterCase()));
+            var returnLine = resultMetaData.ReturnType != ReturnType.None
+                ? $"return await {procName}<T>(parameters);"
+                : $"await {procName}(parameters);";
+
+            return $@"
+                public async Task<T> {procName}({parameterList})
                 {{
                     var parameters = new {procName}_Parameters()
 	                {{
@@ -867,7 +904,142 @@ public class Generator
         sb.AppendLine($"}}");
         return sb.ToString();
     }
+    private static string AddProcedureCallingMethodGeneric(ProcedureSetting procedureSetting, List<ParameterDefinition> parameters, string methodReturnType,
+    Settings settings, ResultMetaData resultMetaData, IDataLookup lookup, bool includeConnectionCreation = true)
+    {
+        StringBuilder sb = new StringBuilder();
+        if (parameters.Any())
+        {
+            sb.AppendLine($@"public async Task<T>{procedureSetting.GetName()}({procedureSetting.GetName()}_Parameters parameters)
+                {{");
+        }
+        else
+        {
+            sb.AppendLine($@"public async Task<T>{procedureSetting.GetName()}()
+                {{");
+        }
 
+        {
+            if (includeConnectionCreation)
+            {
+                sb.AppendLine(
+                    $@"if (_inTransaction) 
+                    {{ 
+                        throw new Exception(""Currently in a transaction. This requires accessing methods from the context repository instance within the RunTransaction call.""
+                        + "" Please do not use the repository instance defined outside of RunTransaction. Example: If you're using _repository, change it to context.Repository."");
+                    }}");
+            }
+
+            if (resultMetaData.ReturnType != ReturnType.None)
+            {
+                sb.AppendLine($@"var results = new List<{procedureSetting.GetName()}_ResultSet>();");
+            }
+
+            if (includeConnectionCreation)
+            {
+                sb.AppendLine($@"using (SqlConnection connection = new SqlConnection(_connectionString))
+            {{");
+            }
+
+            // If not creating connection ourselves, assuming this includes the transaction and as such it needs to be added to the sql command
+            var transactionAddition = includeConnectionCreation ? "" : ", Transaction = transaction";
+            sb.AppendLine($@"using (SqlCommand cm = new SqlCommand(""[{settings.SchemaName}].[{procedureSetting.Proc}]"", connection){{CommandType = CommandType.StoredProcedure{transactionAddition}}})");
+            sb.AppendLine("{");
+            {
+                foreach (var p in parameters)
+                {
+                    var udtMatch = lookup.GetUserDefinedType(p.TypeSchema, p.TypeName);
+                    if (udtMatch != null)
+                    {
+                        // Data table for user defined types
+                        sb.AppendLine($@"var dt{p.CSharpPropertyName()} = new DataTable();");
+
+                        foreach (var udtTypeColumn in udtMatch.Rows)
+                        {
+                            sb.AppendLine($"dt{p.CSharpPropertyName()}.Columns.Add(\"{udtTypeColumn.ColumnName}\", typeof({udtTypeColumn.CSharpType(isNullable: false)}));");
+                        }
+
+                        sb.AppendLine($@"
+                            parameters.{p.CSharpPropertyName()}?.ForEach(p => 
+                                dt{p.CSharpPropertyName()}.Rows.Add(new object?[]
+                                {{
+                                    {string.Join("," + Environment.NewLine, udtMatch.Rows.Select(dt => $@"(object?)p.{dt.ColumnName} ?? DBNull.Value"))}
+                                }}));"
+                        );
+
+                        sb.AppendLine(
+                            $@"cm.Parameters.Add(new SqlParameter() {{ ParameterName = ""{p.Name}"", SqlDbType = SqlDbType.Structured, Value = dt{p.CSharpPropertyName()}, TypeName = ""{p.TypeSchema}.{p.TypeName}"" }});");
+                    }
+                    else
+                    {
+                        var verificationLine = p.ParameterDataVerification();
+                        if (!string.IsNullOrWhiteSpace(verificationLine)) sb.AppendLine(verificationLine);
+                        // Individual rows
+                        if (p.DefaultValue != null && !p.IsOutput)
+                        {
+                            // A default value in the database means that we only add the SqlParameter if there is a value. 
+                            sb.AppendLine($@"if (parameters.{p.CSharpPropertyName()} != null)
+                            {{");
+                        }
+
+                        {
+                            sb.AppendLine(
+                                $@"cm.Parameters.Add(new SqlParameter(""{p.Name}"", SqlDbType.{p.SQLDBType()}) 
+								{{");
+                            {
+                                sb.AppendLine($"Value = (object?)parameters.{p.CSharpPropertyName()} ?? DBNull.Value,");
+                                if (p.IsOutput) sb.AppendLine($"Direction = ParameterDirection.InputOutput,");
+                                if (p.Precision != 0) sb.AppendLine($"Precision = {p.Precision},");
+                                if (p.Scale != 0) sb.AppendLine($"Scale = {p.Scale},");
+                                if (p.MaxLength != 0) sb.AppendLine($"Size = {p.MaxLength}");
+                            }
+                            sb.AppendLine($@"}});");
+                        }
+                        if (p.DefaultValue != null && !p.IsOutput)
+                        {
+                            sb.AppendLine($@"}}");
+                        }
+                    }
+                }
+
+                sb.AppendLine($@"if (connection.State != ConnectionState.Open) await connection.OpenAsync();");
+
+                AppendResultAssignment(sb, procedureSetting, parameters, resultMetaData, lookup);
+
+                // sb.AppendLine($@"await connection.CloseAsync();");
+            }
+            if (includeConnectionCreation)
+            {
+                sb.AppendLine($"}}");
+            }
+            sb.AppendLine("}");
+
+            switch (resultMetaData.ReturnType)
+            {
+                case ReturnType.List:
+                    sb.AppendLine("return _mapper.Map<T>(results);");
+                    break;
+                case ReturnType.Single:
+                    sb.AppendLine("return _mapper.Map<T>(results.Single());");
+                    break;
+                case ReturnType.SingleOrDefault:
+                    sb.AppendLine("return _mapper.Map<T>(results.SingleOrDefault());");
+                    break;
+                case ReturnType.Scalar:
+                    sb.AppendLine("return _mapper.Map<T>(results.Single()." + resultMetaData.Properties.Single().CSharpName + ");");
+                    break;
+                case ReturnType.Output:
+                    sb.AppendLine("return _mapper.Map<T>(results.Single());");
+                    break;
+                case ReturnType.None:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+        sb.AppendLine($"}}");
+        return sb.ToString();
+    }
     private static void AppendResultAssignment(StringBuilder sb, ProcedureSetting procedureSetting, List<ParameterDefinition> parameters, ResultMetaData resultMeta, IDataLookup lookup)
     {
         if (resultMeta.ReturnType != ReturnType.None && resultMeta.ReturnType != ReturnType.Output)

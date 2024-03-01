@@ -5,6 +5,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
+using AutoMapper;
 using Xunit;
 
 namespace DataAccessGeneration.XUnitTest;

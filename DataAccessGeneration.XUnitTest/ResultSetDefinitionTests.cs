@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using DataAccessGeneration.XUnitTest.Extensions;
 using Xunit;
+using AutoMapper;
 
 namespace DataAccessGeneration.XUnitTest;
 
